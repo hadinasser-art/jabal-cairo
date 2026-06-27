@@ -231,11 +231,8 @@ export function ProductCard({ item }: { item: Item }) {
   return (
     <Link to="/product/$id" params={{ id: item.id }} className="pc group">
       <div className="pc-img-wrap">
-        {item.image_url ? (
-          <img src={item.image_url} alt={item.name} className="pc-img" loading="lazy" />
-        ) : (
-          <div style={{ width: "100%", height: "100%", background: "var(--jb-product-bg)" }} />
-        )}
+        <div style={{ width: "100%", height: "100%", background: "var(--jb-product-bg)" }} />
+
         {item.sold_out ? (
           <div className="pc-soldout">Sold out</div>
         ) : (
