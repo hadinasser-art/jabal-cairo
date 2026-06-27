@@ -59,12 +59,12 @@ function CartPage() {
         p_customer_email: form.email.trim(),
         p_customer_phone: form.phone.trim(),
         p_shipping_address: form.address.trim(),
-        p_items: items.map((it) => ({
+        p_items: JSON.stringify(items.map((it) => ({
           item_id: it.id,
           item_name: it.name,
           quantity: it.quantity,
           total_price_egp: it.price_egp * it.quantity,
-        })),
+        }))),
       });
       if (error) throw error;
       const orderId = data as string;
