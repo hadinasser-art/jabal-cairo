@@ -16,7 +16,18 @@ export const Route = createFileRoute("/shop")({
   component: ShopPage,
 });
 
-const FILTERS = ["All", "Tops", "Bottoms", "Outerwear", "Accessories"] as const;
+const FILTERS = [
+  "All",
+  "T-shirts",
+  "Shirts",
+  "Jeans",
+  "Chinos",
+  "Jackets",
+  "Knitwear",
+  "Hoodies",
+  "Trousers",
+] as const;
+
 
 function ShopPage() {
   const [items, setItems] = useState<Item[] | null>(null);

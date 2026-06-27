@@ -116,35 +116,23 @@ function Index() {
           <Link to="/shop" className="jb-link hidden md:inline-block">View all</Link>
         </div>
 
-        {err && <ErrorBanner />}
-        {!items && !err && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i}>
-                <Skeleton className="aspect-[3/4] w-full" />
-                <Skeleton className="h-3 w-2/3 mt-3" />
-                <Skeleton className="h-3 w-1/4 mt-2" />
-              </div>
-            ))}
-          </div>
-        )}
-        {items && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-            {items.slice(0, 4).map((it) => (
-              <ProductCard key={it.id} item={it} />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
+          {ARRIVALS.map((p) => (
+            <StaticProductCard key={p.name} product={p} />
+          ))}
+        </div>
 
         <div className="mt-10 md:hidden text-center">
           <Link to="/shop" className="jb-link">View all</Link>
         </div>
+
       </section>
 
       {/* Two-panel editorial strip */}
       <section className="grid md:grid-cols-2" style={{ background: "#111", color: "#fff" }}>
-        <EditorialPanel eyebrow="The basics" title="Considered everyday tees, cut and sewn in soft cotton." cta="Shop tees" />
-        <EditorialPanel eyebrow="Outerwear" title="Layered pieces for shifting Cairo evenings." cta="Shop hoodies" border />
+        <EditorialPanel eyebrow="The basics" title="Everyday t-shirts and shirts in soft, easy cotton." cta="Shop tops" />
+        <EditorialPanel eyebrow="Denim & jackets" title="Straight-leg jeans and light layers for the season." cta="Shop new in" border />
+
       </section>
 
       {/* More featured */}
@@ -244,11 +232,8 @@ export function ProductCard({ item }: { item: Item }) {
   return (
     <Link to="/product/$id" params={{ id: item.id }} className="pc group">
       <div className="pc-img-wrap">
-        {item.image_url ? (
-          <img src={item.image_url} alt={item.name} className="pc-img" loading="lazy" />
-        ) : (
-          <div style={{ width: "100%", height: "100%", background: "var(--jb-product-bg)" }} />
-        )}
+        <div style={{ width: "100%", height: "100%", background: "var(--jb-product-bg)" }} />
+
         {item.sold_out ? (
           <div className="pc-soldout">Sold out</div>
         ) : (
@@ -298,3 +283,44 @@ function swatchColor(name: string): string {
   for (const k of Object.keys(map)) if (n.includes(k)) return map[k];
   return "#cfcfcf";
 }
+
+type Arrival = { name: string; price: number; colors: string[] };
+const ARRIVALS: Arrival[] = [
+  { name: "Essential Cotton T-Shirt", price: 650, colors: ["white", "black", "beige"] },
+  { name: "Relaxed Fit Shirt", price: 950, colors: ["white", "blue"] },
+  { name: "Straight Leg Jeans", price: 1250, colors: ["blue", "black"] },
+  { name: "Lightweight Casual Jacket", price: 1600, colors: ["beige", "black"] },
+];
+
+function StaticProductCard({ product }: { product: Arrival }) {
+  return (
+    <div className="pc">
+      <div className="pc-img-wrap">
+        <div style={{ width: "100%", height: "100%", background: "var(--jb-product-bg)" }} />
+      </div>
+      <div className="mt-3">
+        <div style={{ fontSize: 13, fontWeight: 400, color: "var(--jb-ink)" }}>{product.name}</div>
+        <div style={{ fontSize: 13, color: "var(--jb-muted)", marginTop: 2 }}>
+          {formatPrice(product.price)}
+        </div>
+        <div className="flex gap-[6px] mt-2">
+          {product.colors.map((c) => (
+            <span
+              key={c}
+              title={c}
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 999,
+                background: swatchColor(c),
+                border: "1px solid var(--jb-line)",
+                display: "inline-block",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
