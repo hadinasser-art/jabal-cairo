@@ -296,19 +296,67 @@ function swatchColor(name: string): string {
   return "#cfcfcf";
 }
 
-type Arrival = { name: string; price: number; colors: string[] };
-const ARRIVALS: Arrival[] = [
-  { name: "Essential Cotton T-Shirt", price: 650, colors: ["white", "black", "beige"] },
-  { name: "Relaxed Fit Shirt", price: 950, colors: ["white", "blue"] },
-  { name: "Straight Leg Jeans", price: 1250, colors: ["blue", "black"] },
-  { name: "Lightweight Casual Jacket", price: 1600, colors: ["beige", "black"] },
+type Arrival = { id: string; name: string; price: number; colors: string[] };
+
+const MEN: Arrival[] = [
+  { id: "m-tee", name: "Essential Cotton T-Shirt", price: 650, colors: ["white", "black", "beige"] },
+  { id: "m-shirt", name: "Relaxed Fit Shirt", price: 950, colors: ["white", "blue"] },
+  { id: "m-jeans", name: "Straight Leg Jeans", price: 1250, colors: ["blue", "black"] },
+  { id: "m-jacket", name: "Lightweight Casual Jacket", price: 1600, colors: ["beige", "black"] },
+];
+
+const WOMEN: Arrival[] = [
+  { id: "w-top", name: "Basic Fitted Top", price: 550, colors: ["white", "black", "pink"] },
+  { id: "w-shirt", name: "Oversized Cotton Shirt", price: 950, colors: ["white", "beige"] },
+  { id: "w-jeans", name: "High Waist Jeans", price: 1300, colors: ["blue", "black"] },
+  { id: "w-cardigan", name: "Soft Knit Cardigan", price: 1450, colors: ["cream", "grey"] },
 ];
 
 function StaticProductCard({ product }: { product: Arrival }) {
+  const { addItem } = useCart();
+  const navigate = useNavigate();
+
+  const addToCart = () => {
+    const color = product.colors[0] ?? null;
+    addItem({
+      id: product.id,
+      name: product.name,
+      price_egp: product.price,
+      image_url: null,
+      selectedSize: null,
+      selectedColor: color,
+      quantity: 1,
+      stock_quantity: 99,
+    });
+    notifyAddedToBag({
+      name: product.name,
+      size: null,
+      color,
+      onView: () => navigate({ to: "/cart" }),
+    });
+  };
+
   return (
     <div className="pc">
-      <div className="pc-img-wrap">
-        <div style={{ width: "100%", height: "100%", background: "var(--jb-product-bg)" }} />
+      <div className="pc-img-wrap" style={{ background: "#f1f1f1" }}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            padding: 16,
+            fontSize: 11,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "#999",
+            fontWeight: 400,
+          }}
+        >
+          Product image<br />coming soon
+        </div>
       </div>
       <div className="mt-3">
         <div style={{ fontSize: 13, fontWeight: 400, color: "var(--jb-ink)" }}>{product.name}</div>
@@ -331,8 +379,28 @@ function StaticProductCard({ product }: { product: Arrival }) {
             />
           ))}
         </div>
+        <button
+          type="button"
+          onClick={addToCart}
+          style={{
+            marginTop: 12,
+            width: "100%",
+            background: "var(--jb-ink)",
+            color: "#fff",
+            border: "1px solid var(--jb-ink)",
+            padding: "10px 14px",
+            fontSize: 11,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
+        >
+          Add to cart
+        </button>
       </div>
     </div>
   );
 }
+
 
