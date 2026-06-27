@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Layout, Skeleton, ErrorBanner } from "@/components/Layout";
-import { supabase, type Item, formatPrice } from "@/lib/supabase";
+import { useEffect } from "react";
+import { Layout } from "@/components/Layout";
+import { type Item, formatPrice } from "@/lib/supabase";
 import { useCart } from "@/lib/cart";
 import { notifyAddedToBag } from "@/lib/notify";
 
@@ -18,20 +18,15 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [items, setItems] = useState<Item[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
+  // Scroll to hash anchor (#men / #women) when landing on the homepage with a hash
   useEffect(() => {
-    supabase
-      .from("items")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(8)
-      .then(({ data, error }) => {
-        if (error) setErr(error.message);
-        else setItems(data as Item[]);
-      });
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash?.slice(1);
+    if (!hash) return;
+    const el = document.getElementById(hash);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
+
 
   return (
     <Layout>
@@ -97,11 +92,11 @@ function Index() {
         </div>
       </section>
 
-      {/* New in */}
-      <section className="px-6 md:px-12 py-16 md:py-24 max-w-7xl mx-auto w-full">
+      {/* Men */}
+      <section id="men" className="px-6 md:px-12 py-16 md:py-24 max-w-7xl mx-auto w-full scroll-mt-24">
         <div className="flex items-end justify-between mb-10">
           <div>
-            <div className="jb-eyebrow">New in</div>
+            <div className="jb-eyebrow">Men</div>
             <h2
               style={{
                 fontSize: "clamp(1.5rem, 3vw, 2rem)",
@@ -110,45 +105,62 @@ function Index() {
                 marginTop: 8,
               }}
             >
-              This week's arrivals
+              Men's everyday essentials
             </h2>
           </div>
           <Link to="/shop" className="jb-link hidden md:inline-block">View all</Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-          {ARRIVALS.map((p) => (
-            <StaticProductCard key={p.name} product={p} />
+          {MEN.map((p) => (
+            <StaticProductCard key={p.id} product={p} />
           ))}
         </div>
 
         <div className="mt-10 md:hidden text-center">
           <Link to="/shop" className="jb-link">View all</Link>
         </div>
-
       </section>
 
       {/* Two-panel editorial strip */}
       <section className="grid md:grid-cols-2" style={{ background: "#111", color: "#fff" }}>
         <EditorialPanel eyebrow="The basics" title="Everyday t-shirts and shirts in soft, easy cotton." cta="Shop tops" />
         <EditorialPanel eyebrow="Denim & jackets" title="Straight-leg jeans and light layers for the season." cta="Shop new in" border />
-
       </section>
 
-      {/* More featured */}
-      {items && items.length > 4 && (
-        <section className="px-6 md:px-12 py-16 md:py-24 max-w-7xl mx-auto w-full">
-          <div className="jb-eyebrow mb-6">Featured</div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-            {items.slice(4, 8).map((it) => (
-              <ProductCard key={it.id} item={it} />
-            ))}
+      {/* Women */}
+      <section id="women" className="px-6 md:px-12 py-16 md:py-24 max-w-7xl mx-auto w-full scroll-mt-24">
+        <div className="flex items-end justify-between mb-10">
+          <div>
+            <div className="jb-eyebrow">Women</div>
+            <h2
+              style={{
+                fontSize: "clamp(1.5rem, 3vw, 2rem)",
+                fontWeight: 400,
+                letterSpacing: "-0.01em",
+                marginTop: 8,
+              }}
+            >
+              Women's everyday essentials
+            </h2>
           </div>
-        </section>
-      )}
+          <Link to="/shop" className="jb-link hidden md:inline-block">View all</Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
+          {WOMEN.map((p) => (
+            <StaticProductCard key={p.id} product={p} />
+          ))}
+        </div>
+
+        <div className="mt-10 md:hidden text-center">
+          <Link to="/shop" className="jb-link">View all</Link>
+        </div>
+      </section>
     </Layout>
   );
 }
+
 
 function EditorialPanel({
   eyebrow, title, cta, border,
@@ -284,19 +296,67 @@ function swatchColor(name: string): string {
   return "#cfcfcf";
 }
 
-type Arrival = { name: string; price: number; colors: string[] };
-const ARRIVALS: Arrival[] = [
-  { name: "Essential Cotton T-Shirt", price: 650, colors: ["white", "black", "beige"] },
-  { name: "Relaxed Fit Shirt", price: 950, colors: ["white", "blue"] },
-  { name: "Straight Leg Jeans", price: 1250, colors: ["blue", "black"] },
-  { name: "Lightweight Casual Jacket", price: 1600, colors: ["beige", "black"] },
+type Arrival = { id: string; name: string; price: number; colors: string[] };
+
+const MEN: Arrival[] = [
+  { id: "m-tee", name: "Essential Cotton T-Shirt", price: 650, colors: ["white", "black", "beige"] },
+  { id: "m-shirt", name: "Relaxed Fit Shirt", price: 950, colors: ["white", "blue"] },
+  { id: "m-jeans", name: "Straight Leg Jeans", price: 1250, colors: ["blue", "black"] },
+  { id: "m-jacket", name: "Lightweight Casual Jacket", price: 1600, colors: ["beige", "black"] },
+];
+
+const WOMEN: Arrival[] = [
+  { id: "w-top", name: "Basic Fitted Top", price: 550, colors: ["white", "black", "pink"] },
+  { id: "w-shirt", name: "Oversized Cotton Shirt", price: 950, colors: ["white", "beige"] },
+  { id: "w-jeans", name: "High Waist Jeans", price: 1300, colors: ["blue", "black"] },
+  { id: "w-cardigan", name: "Soft Knit Cardigan", price: 1450, colors: ["cream", "grey"] },
 ];
 
 function StaticProductCard({ product }: { product: Arrival }) {
+  const { addItem } = useCart();
+  const navigate = useNavigate();
+
+  const addToCart = () => {
+    const color = product.colors[0] ?? null;
+    addItem({
+      id: product.id,
+      name: product.name,
+      price_egp: product.price,
+      image_url: null,
+      selectedSize: null,
+      selectedColor: color,
+      quantity: 1,
+      stock_quantity: 99,
+    });
+    notifyAddedToBag({
+      name: product.name,
+      size: null,
+      color,
+      onView: () => navigate({ to: "/cart" }),
+    });
+  };
+
   return (
     <div className="pc">
-      <div className="pc-img-wrap">
-        <div style={{ width: "100%", height: "100%", background: "var(--jb-product-bg)" }} />
+      <div className="pc-img-wrap" style={{ background: "#f1f1f1" }}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            padding: 16,
+            fontSize: 11,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "#999",
+            fontWeight: 400,
+          }}
+        >
+          Product image<br />coming soon
+        </div>
       </div>
       <div className="mt-3">
         <div style={{ fontSize: 13, fontWeight: 400, color: "var(--jb-ink)" }}>{product.name}</div>
@@ -319,8 +379,28 @@ function StaticProductCard({ product }: { product: Arrival }) {
             />
           ))}
         </div>
+        <button
+          type="button"
+          onClick={addToCart}
+          style={{
+            marginTop: 12,
+            width: "100%",
+            background: "var(--jb-ink)",
+            color: "#fff",
+            border: "1px solid var(--jb-ink)",
+            padding: "10px 14px",
+            fontSize: 11,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
+        >
+          Add to cart
+        </button>
       </div>
     </div>
   );
 }
+
 
