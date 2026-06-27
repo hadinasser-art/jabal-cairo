@@ -97,11 +97,11 @@ function Index() {
         </div>
       </section>
 
-      {/* New in */}
-      <section className="px-6 md:px-12 py-16 md:py-24 max-w-7xl mx-auto w-full">
+      {/* Men */}
+      <section id="men" className="px-6 md:px-12 py-16 md:py-24 max-w-7xl mx-auto w-full scroll-mt-24">
         <div className="flex items-end justify-between mb-10">
           <div>
-            <div className="jb-eyebrow">New in</div>
+            <div className="jb-eyebrow">Men</div>
             <h2
               style={{
                 fontSize: "clamp(1.5rem, 3vw, 2rem)",
@@ -110,45 +110,62 @@ function Index() {
                 marginTop: 8,
               }}
             >
-              This week's arrivals
+              Men's everyday essentials
             </h2>
           </div>
           <Link to="/shop" className="jb-link hidden md:inline-block">View all</Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-          {ARRIVALS.map((p) => (
-            <StaticProductCard key={p.name} product={p} />
+          {MEN.map((p) => (
+            <StaticProductCard key={p.id} product={p} />
           ))}
         </div>
 
         <div className="mt-10 md:hidden text-center">
           <Link to="/shop" className="jb-link">View all</Link>
         </div>
-
       </section>
 
       {/* Two-panel editorial strip */}
       <section className="grid md:grid-cols-2" style={{ background: "#111", color: "#fff" }}>
         <EditorialPanel eyebrow="The basics" title="Everyday t-shirts and shirts in soft, easy cotton." cta="Shop tops" />
         <EditorialPanel eyebrow="Denim & jackets" title="Straight-leg jeans and light layers for the season." cta="Shop new in" border />
-
       </section>
 
-      {/* More featured */}
-      {items && items.length > 4 && (
-        <section className="px-6 md:px-12 py-16 md:py-24 max-w-7xl mx-auto w-full">
-          <div className="jb-eyebrow mb-6">Featured</div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-            {items.slice(4, 8).map((it) => (
-              <ProductCard key={it.id} item={it} />
-            ))}
+      {/* Women */}
+      <section id="women" className="px-6 md:px-12 py-16 md:py-24 max-w-7xl mx-auto w-full scroll-mt-24">
+        <div className="flex items-end justify-between mb-10">
+          <div>
+            <div className="jb-eyebrow">Women</div>
+            <h2
+              style={{
+                fontSize: "clamp(1.5rem, 3vw, 2rem)",
+                fontWeight: 400,
+                letterSpacing: "-0.01em",
+                marginTop: 8,
+              }}
+            >
+              Women's everyday essentials
+            </h2>
           </div>
-        </section>
-      )}
+          <Link to="/shop" className="jb-link hidden md:inline-block">View all</Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
+          {WOMEN.map((p) => (
+            <StaticProductCard key={p.id} product={p} />
+          ))}
+        </div>
+
+        <div className="mt-10 md:hidden text-center">
+          <Link to="/shop" className="jb-link">View all</Link>
+        </div>
+      </section>
     </Layout>
   );
 }
+
 
 function EditorialPanel({
   eyebrow, title, cta, border,
