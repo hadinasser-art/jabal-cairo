@@ -50,10 +50,12 @@ export function Layout({ children }: { children: ReactNode }) {
           className="hidden md:flex gap-10 items-center"
           style={{ fontSize: "12px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 400 }}
         >
+          <Link to="/" hash="men" className="hover:underline" style={{ textUnderlineOffset: 4 }}>Men</Link>
+          <Link to="/" hash="women" className="hover:underline" style={{ textUnderlineOffset: 4 }}>Women</Link>
           <Link to="/shop" className="hover:underline" style={{ textUnderlineOffset: 4 }}>Shop</Link>
-          <Link to="/shop" className="hover:underline" style={{ textUnderlineOffset: 4 }}>New in</Link>
-          <Link to="/shop" className="hover:underline" style={{ textUnderlineOffset: 4 }}>Sale</Link>
+          <Link to="/" hash="men" className="hover:underline" style={{ textUnderlineOffset: 4 }}>New in</Link>
         </div>
+
 
         <div className="flex items-center gap-5">
           <Link
