@@ -7,47 +7,136 @@ export function Layout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-black">
-      <div className="bg-black text-white text-center py-[10px] px-4 text-[0.75rem] tracking-[0.15em] uppercase">
-        NEW DROP — SUMMER 2025 COLLECTION NOW LIVE. FREE SHIPPING ABOVE EGP 2,000
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--jb-bg)", color: "var(--jb-ink)" }}>
+      {/* Promo strip */}
+      <div
+        className="text-center px-4"
+        style={{
+          background: "#111",
+          color: "#fff",
+          fontSize: "11px",
+          letterSpacing: "0.15em",
+          textTransform: "uppercase",
+          padding: "8px 16px",
+          fontWeight: 400,
+        }}
+      >
+        New season — free shipping above EGP 2,000
       </div>
-      <nav className="sticky top-0 z-[100] bg-white border-b-[1.5px] border-black h-16 px-5 md:px-10 flex items-center justify-between">
-        <Link to="/" className="font-black text-[1.4rem] uppercase tracking-[0.15em]">
-          JABAL
+
+      {/* Nav */}
+      <nav
+        className="sticky top-0 z-[100] flex items-center justify-between px-5 md:px-10"
+        style={{
+          background: "#fff",
+          borderBottom: "1px solid var(--jb-line)",
+          height: "64px",
+        }}
+      >
+        <Link
+          to="/"
+          style={{
+            fontSize: "18px",
+            letterSpacing: "0.22em",
+            fontWeight: 500,
+            textTransform: "uppercase",
+            color: "var(--jb-ink)",
+          }}
+        >
+          Jabal
         </Link>
-        <div className="hidden md:flex gap-10 items-center text-[0.8rem] uppercase tracking-[0.15em] font-bold">
-          <Link to="/shop" className="hover:underline">Shop</Link>
-          <Link to="/shop" search={{ filter: "sale" } as never} className="hover:underline">Sale</Link>
-          <Link to="/shop" className="hover:underline">New In</Link>
+
+        <div
+          className="hidden md:flex gap-10 items-center"
+          style={{ fontSize: "12px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 400 }}
+        >
+          <Link to="/shop" className="hover:underline" style={{ textUnderlineOffset: 4 }}>Shop</Link>
+          <Link to="/shop" className="hover:underline" style={{ textUnderlineOffset: 4 }}>New in</Link>
+          <Link to="/shop" className="hover:underline" style={{ textUnderlineOffset: 4 }}>Sale</Link>
         </div>
-        <div className="flex items-center gap-4">
-          <Link to="/cart" className="relative flex items-center font-bold uppercase tracking-[0.1em] text-[0.8rem]">
-            Cart
+
+        <div className="flex items-center gap-5">
+          <Link
+            to="/cart"
+            className="relative flex items-center gap-2"
+            style={{ fontSize: "12px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 400 }}
+          >
+            Bag
             {count > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1 bg-black text-white text-[0.7rem] font-bold">
+              <span
+                className="inline-flex items-center justify-center"
+                style={{
+                  width: 20, height: 20, borderRadius: 999,
+                  background: "var(--jb-ink)", color: "#fff",
+                  fontSize: 10, fontWeight: 500, letterSpacing: 0,
+                }}
+              >
                 {count}
               </span>
             )}
           </Link>
-          <button className="md:hidden font-bold text-xl" onClick={() => setOpen((v) => !v)} aria-label="Menu">
+          <button
+            className="md:hidden"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Menu"
+            style={{ fontSize: 18, color: "var(--jb-ink)" }}
+          >
             {open ? "✕" : "☰"}
           </button>
         </div>
       </nav>
+
       {open && (
-        <div className="md:hidden border-b-[1.5px] border-black bg-white flex flex-col text-[0.85rem] uppercase tracking-[0.15em] font-bold">
-          <Link to="/shop" className="px-5 py-4 border-b border-black/10" onClick={() => setOpen(false)}>Shop</Link>
-          <Link to="/shop" className="px-5 py-4 border-b border-black/10" onClick={() => setOpen(false)}>Sale</Link>
-          <Link to="/shop" className="px-5 py-4" onClick={() => setOpen(false)}>New In</Link>
+        <div
+          className="md:hidden flex flex-col"
+          style={{ background: "#fff", borderBottom: "1px solid var(--jb-line)" }}
+        >
+          {[
+            { to: "/shop", label: "Shop" },
+            { to: "/shop", label: "New in" },
+            { to: "/shop", label: "Sale" },
+          ].map((l, i) => (
+            <Link
+              key={i}
+              to={l.to}
+              onClick={() => setOpen(false)}
+              style={{
+                padding: "16px 20px",
+                fontSize: 12,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                borderBottom: "1px solid var(--jb-line)",
+                color: "var(--jb-ink)",
+              }}
+            >
+              {l.label}
+            </Link>
+          ))}
         </div>
       )}
+
       <main className="flex-1">{children}</main>
-      <footer className="bg-black text-white px-6 md:px-12 py-16 mt-16">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-5xl md:text-7xl font-black uppercase tracking-[-0.03em]">JABAL</div>
-          <div className="mt-4 text-sm uppercase tracking-[0.15em]">Cairo, Egypt</div>
-          <div className="mt-12 text-xs uppercase tracking-[0.15em] opacity-60">
-            © {new Date().getFullYear()} JABAL. All rights reserved.
+
+      {/* Footer */}
+      <footer style={{ background: "#fff", borderTop: "1px solid var(--jb-line)", marginTop: 80 }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-12 py-16">
+          <div className="grid md:grid-cols-4 gap-10">
+            <div>
+              <div style={{ fontSize: 18, letterSpacing: "0.22em", textTransform: "uppercase", fontWeight: 500 }}>
+                Jabal
+              </div>
+              <div className="jb-eyebrow mt-3">Cairo, Egypt</div>
+            </div>
+            <FooterCol title="Shop" items={["New in", "Tops", "Bottoms", "Outerwear"]} />
+            <FooterCol title="Help" items={["Shipping", "Returns", "Size guide", "Contact"]} />
+            <FooterCol title="Company" items={["About", "Stores", "Sustainability"]} />
+          </div>
+          <div
+            className="mt-16 pt-8 flex flex-col md:flex-row justify-between gap-3"
+            style={{ borderTop: "1px solid var(--jb-line)", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--jb-muted)" }}
+          >
+            <div>© {new Date().getFullYear()} Jabal. All rights reserved.</div>
+            <div>Cairo · Egypt</div>
           </div>
         </div>
       </footer>
@@ -55,13 +144,36 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 }
 
+function FooterCol({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <div className="jb-eyebrow" style={{ color: "var(--jb-ink)" }}>{title}</div>
+      <ul className="mt-4 space-y-2">
+        {items.map((it) => (
+          <li key={it} style={{ fontSize: 13, color: "var(--jb-muted)" }}>{it}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`jabal-shimmer ${className}`} />;
+  return <div className={`jb-shimmer ${className}`} />;
 }
 
 export function ErrorBanner({ message = "Something went wrong. Please refresh." }: { message?: string }) {
   return (
-    <div className="bg-black text-white px-6 py-4 text-sm uppercase tracking-[0.1em] font-bold">
+    <div
+      style={{
+        background: "#fff",
+        border: "1px solid var(--jb-ink)",
+        padding: "14px 18px",
+        fontSize: 12,
+        letterSpacing: "0.15em",
+        textTransform: "uppercase",
+        color: "var(--jb-ink)",
+      }}
+    >
       {message}
     </div>
   );
