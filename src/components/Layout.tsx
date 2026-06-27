@@ -94,13 +94,15 @@ export function Layout({ children }: { children: ReactNode }) {
           style={{ background: "#fff", borderBottom: "1px solid var(--jb-line)" }}
         >
           {[
-            { to: "/shop", label: "Shop" },
-            { to: "/shop", label: "New in" },
-            { to: "/shop", label: "Sale" },
+            { to: "/" as const, hash: "men", label: "Men" },
+            { to: "/" as const, hash: "women", label: "Women" },
+            { to: "/shop" as const, hash: undefined, label: "Shop" },
+            { to: "/" as const, hash: "men", label: "New in" },
           ].map((l, i) => (
             <Link
               key={i}
               to={l.to}
+              hash={l.hash}
               onClick={() => setOpen(false)}
               style={{
                 padding: "16px 20px",
@@ -114,6 +116,7 @@ export function Layout({ children }: { children: ReactNode }) {
               {l.label}
             </Link>
           ))}
+
         </div>
       )}
 
