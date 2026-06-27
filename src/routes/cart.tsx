@@ -54,19 +54,20 @@ function CartPage() {
     }
     setSubmitting(true);
     try {
-      const rows = items.map((it) => ({
-        customer_name: form.name.trim(),
-        customer_email: form.email.trim(),
-        customer_phone: form.phone.trim(),
-        shipping_address: form.address.trim(),
-        item_id: it.id,
-        item_name: it.name,
-        quantity: it.quantity,
-        total_price_egp: it.price_egp * it.quantity,
-      }));
-      const { data, error } = await supabase.from("orders").insert(rows).select("order_id");
+      const { data, error } = await supabase.rpc("place_order", {
+        p_customer_name: form.name.trim(),
+        p_customer_email: form.email.trim(),
+        p_customer_phone: form.phone.trim(),
+        p_shipping_address: form.address.trim(),
+        p_items: items.map((it) => ({
+          item_id: it.id,
+          item_name: it.name,
+          quantity: it.quantity,
+          total_price_egp: it.price_egp * it.quantity,
+        })),
+      });
       if (error) throw error;
-      const orderId = (data?.[0] as { order_id: string } | undefined)?.order_id;
+      const orderId = data as string;
       if (!orderId) throw new Error("Order created but no order_id returned.");
 
       try {
