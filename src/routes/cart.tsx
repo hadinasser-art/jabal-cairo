@@ -54,21 +54,25 @@ function CartPage() {
     }
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.rpc("place_order", {
-        p_customer_name: form.name.trim(),
-        p_customer_email: form.email.trim(),
-        p_customer_phone: form.phone.trim(),
-        p_shipping_address: form.address.trim(),
-        p_items: JSON.stringify(items.map((it) => ({
-          item_id: it.id,
-          item_name: it.name,
-          quantity: it.quantity,
-          total_price_egp: it.price_egp * it.quantity,
-        }))),
-      });
-      if (error) throw error;
-      const orderId = data as string;
-      if (!orderId) throw new Error("Order created but no order_id returned.");
+      // Step 1: generate one order_id
+      const { data: orderIdData, error: orderIdError } = await supabase.rpc("generate_order_id");
+      if (orderIdError) throw new Error("Could not generate order ID: " + orderIdError.message);
+      const orderId = orderIdData as string;
+
+      // Step 2: insert all cart items sharing that order_id
+      const rows = items.map((it) => ({
+        order_id: orderId,
+        customer_name: form.name.trim(),
+        customer_email: form.email.trim(),
+        customer_phone: form.phone.trim(),
+        shipping_address: form.address.trim(),
+        item_id: it.id,
+        item_name: it.name,
+        quantity: it.quantity,
+        total_price_egp: it.price_egp * it.quantity,
+      }));
+      const { error: insertError } = await supabase.from("orders").insert(rows);
+      if (insertError) throw new Error("Could not save order: " + insertError.message);
 
       try {
         sessionStorage.setItem(
