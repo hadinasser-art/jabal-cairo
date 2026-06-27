@@ -132,9 +132,31 @@ export function Layout({ children }: { children: ReactNode }) {
               </div>
               <div className="jb-eyebrow mt-3">Cairo, Egypt</div>
             </div>
-            <FooterCol title="Shop" items={["New in", "Tops", "Bottoms", "Outerwear"]} />
-            <FooterCol title="Help" items={["Shipping", "Returns", "Size guide", "Contact"]} />
-            <FooterCol title="Company" items={["About", "Stores", "Sustainability"]} />
+            <FooterCol
+              title="Shop"
+              items={[
+                { label: "Men", to: "/", hash: "men" },
+                { label: "Women", to: "/", hash: "women" },
+                { label: "All products", to: "/shop" },
+                { label: "New in", to: "/", hash: "men" },
+              ]}
+            />
+            <FooterCol
+              title="Help"
+              items={[
+                { label: "Bag", to: "/cart" },
+                { label: "Shop", to: "/shop" },
+                { label: "Men", to: "/", hash: "men" },
+                { label: "Women", to: "/", hash: "women" },
+              ]}
+            />
+            <FooterCol
+              title="Company"
+              items={[
+                { label: "Home", to: "/" },
+                { label: "Shop", to: "/shop" },
+              ]}
+            />
           </div>
           <div
             className="mt-16 pt-8 flex flex-col md:flex-row justify-between gap-3"
@@ -149,18 +171,29 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 }
 
-function FooterCol({ title, items }: { title: string; items: string[] }) {
+type FooterItem = { label: string; to: "/" | "/shop" | "/cart"; hash?: string };
+function FooterCol({ title, items }: { title: string; items: FooterItem[] }) {
   return (
     <div>
       <div className="jb-eyebrow" style={{ color: "var(--jb-ink)" }}>{title}</div>
       <ul className="mt-4 space-y-2">
         {items.map((it) => (
-          <li key={it} style={{ fontSize: 13, color: "var(--jb-muted)" }}>{it}</li>
+          <li key={it.label}>
+            <Link
+              to={it.to}
+              hash={it.hash}
+              style={{ fontSize: 13, color: "var(--jb-muted)" }}
+              className="hover:underline"
+            >
+              {it.label}
+            </Link>
+          </li>
         ))}
       </ul>
     </div>
   );
 }
+
 
 export function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`jb-shimmer ${className}`} />;
