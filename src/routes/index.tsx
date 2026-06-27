@@ -282,3 +282,44 @@ function swatchColor(name: string): string {
   for (const k of Object.keys(map)) if (n.includes(k)) return map[k];
   return "#cfcfcf";
 }
+
+type Arrival = { name: string; price: number; colors: string[] };
+const ARRIVALS: Arrival[] = [
+  { name: "Essential Cotton T-Shirt", price: 650, colors: ["white", "black", "beige"] },
+  { name: "Relaxed Fit Shirt", price: 950, colors: ["white", "blue"] },
+  { name: "Straight Leg Jeans", price: 1250, colors: ["blue", "black"] },
+  { name: "Lightweight Casual Jacket", price: 1600, colors: ["beige", "black"] },
+];
+
+function StaticProductCard({ product }: { product: Arrival }) {
+  return (
+    <div className="pc">
+      <div className="pc-img-wrap">
+        <div style={{ width: "100%", height: "100%", background: "var(--jb-product-bg)" }} />
+      </div>
+      <div className="mt-3">
+        <div style={{ fontSize: 13, fontWeight: 400, color: "var(--jb-ink)" }}>{product.name}</div>
+        <div style={{ fontSize: 13, color: "var(--jb-muted)", marginTop: 2 }}>
+          {formatPrice(product.price)}
+        </div>
+        <div className="flex gap-[6px] mt-2">
+          {product.colors.map((c) => (
+            <span
+              key={c}
+              title={c}
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 999,
+                background: swatchColor(c),
+                border: "1px solid var(--jb-line)",
+                display: "inline-block",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
