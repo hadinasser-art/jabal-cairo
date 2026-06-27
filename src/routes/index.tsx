@@ -116,29 +116,16 @@ function Index() {
           <Link to="/shop" className="jb-link hidden md:inline-block">View all</Link>
         </div>
 
-        {err && <ErrorBanner />}
-        {!items && !err && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i}>
-                <Skeleton className="aspect-[3/4] w-full" />
-                <Skeleton className="h-3 w-2/3 mt-3" />
-                <Skeleton className="h-3 w-1/4 mt-2" />
-              </div>
-            ))}
-          </div>
-        )}
-        {items && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-            {items.slice(0, 4).map((it) => (
-              <ProductCard key={it.id} item={it} />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
+          {ARRIVALS.map((p) => (
+            <StaticProductCard key={p.name} product={p} />
+          ))}
+        </div>
 
         <div className="mt-10 md:hidden text-center">
           <Link to="/shop" className="jb-link">View all</Link>
         </div>
+
       </section>
 
       {/* Two-panel editorial strip */}
