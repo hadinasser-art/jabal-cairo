@@ -130,8 +130,9 @@ function Index() {
 
       {/* Two-panel editorial strip */}
       <section className="grid md:grid-cols-2" style={{ background: "#111", color: "#fff" }}>
-        <EditorialPanel eyebrow="The basics" title="Considered everyday tees, cut and sewn in soft cotton." cta="Shop tees" />
-        <EditorialPanel eyebrow="Outerwear" title="Layered pieces for shifting Cairo evenings." cta="Shop hoodies" border />
+        <EditorialPanel eyebrow="The basics" title="Everyday t-shirts and shirts in soft, easy cotton." cta="Shop tops" />
+        <EditorialPanel eyebrow="Denim & jackets" title="Straight-leg jeans and light layers for the season." cta="Shop new in" border />
+
       </section>
 
       {/* More featured */}
