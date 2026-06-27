@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Layout, Skeleton, ErrorBanner } from "@/components/Layout";
 import { supabase, type Item, formatPrice } from "@/lib/supabase";
 import { useCart } from "@/lib/cart";
+import { notifyAddedToBag } from "@/lib/notify";
 import { ProductCard } from "./index";
 
 export const Route = createFileRoute("/product/$id")({
@@ -77,69 +78,76 @@ function ProductPage() {
       quantity: qty,
       stock_quantity: item.stock_quantity,
     });
-    navigate({ to: "/cart" });
+    notifyAddedToBag({
+      name: item.name,
+      size,
+      color,
+      onView: () => navigate({ to: "/cart" }),
+    });
   };
 
   return (
     <Layout>
-      <div className="grid md:grid-cols-[55%_45%] gap-0 max-w-[1600px] mx-auto">
-        <div className="relative bg-black/5">
+      {/* Breadcrumb */}
+      <div
+        className="px-6 md:px-12 pt-6 max-w-[1600px] mx-auto"
+        style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--jb-muted)" }}
+      >
+        <Link to="/" style={{ color: "var(--jb-muted)" }}>Home</Link>
+        <span style={{ margin: "0 8px" }}>/</span>
+        <Link to="/shop" style={{ color: "var(--jb-muted)" }}>Shop</Link>
+        {item.category && (
+          <>
+            <span style={{ margin: "0 8px" }}>/</span>
+            <span>{item.category}</span>
+          </>
+        )}
+      </div>
+
+      <div className="grid md:grid-cols-[60%_40%] gap-0 max-w-[1600px] mx-auto mt-6">
+        <div style={{ background: "var(--jb-product-bg)" }} className="relative">
           {item.image_url ? (
-            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover aspect-[3/4] md:aspect-auto md:min-h-[80vh]" />
+            <img
+              src={item.image_url}
+              alt={item.name}
+              className="w-full h-full object-cover aspect-[3/4] md:aspect-auto md:min-h-[80vh]"
+            />
           ) : (
-            <div className="aspect-[3/4] bg-black/5" />
+            <div className="aspect-[3/4]" style={{ background: "var(--jb-product-bg)" }} />
           )}
           {item.sold_out && (
-            <div className="soldout-overlay">
-              <span className="jabal-tag text-base px-4 py-2">Sold Out</span>
-            </div>
+            <div className="pc-soldout" style={{ fontSize: 13 }}>Sold out</div>
           )}
         </div>
 
         <div className="p-6 md:p-12 flex flex-col">
-          <div className="text-[0.7rem] uppercase tracking-[0.15em] font-bold opacity-60">
-            {item.category || "Product"}
-          </div>
-          <h1 className="mt-2 font-black uppercase" style={{ fontSize: "clamp(1.75rem, 4vw, 2.5rem)", letterSpacing: "-0.03em", lineHeight: 1 }}>
+          {item.category && <div className="jb-eyebrow">{item.category}</div>}
+          <h1
+            style={{
+              marginTop: 8,
+              fontSize: "clamp(1.5rem, 2.5vw, 2rem)",
+              fontWeight: 400,
+              letterSpacing: "-0.01em",
+              lineHeight: 1.15,
+              color: "var(--jb-ink)",
+            }}
+          >
             {item.name}
           </h1>
-          <div className="mt-4 font-bold" style={{ fontSize: "1.8rem" }}>
+          <div style={{ marginTop: 12, fontSize: 16, color: "var(--jb-ink)" }}>
             {formatPrice(item.price_egp)}
           </div>
           {item.description && (
-            <p className="mt-6 text-sm md:text-base leading-relaxed">{item.description}</p>
+            <p style={{ marginTop: 20, fontSize: 14, lineHeight: 1.7, color: "var(--jb-muted)" }}>
+              {item.description}
+            </p>
           )}
 
-          <div className="my-8 border-t border-black/10" />
-
-          {!item.sold_out && item.size && item.size.length > 0 && (
-            <div className="mb-6">
-              <span className="jabal-label">Size</span>
-              <div className="flex flex-wrap gap-2">
-                {item.size.map((s) => {
-                  const sel = s === size;
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => setSize(s)}
-                      className="min-w-[48px] h-[44px] px-4 text-sm font-bold uppercase tracking-[0.1em]"
-                      style={{
-                        border: "1.5px solid #000",
-                        background: sel ? "#000" : "#fff",
-                        color: sel ? "#fff" : "#000",
-                      }}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <div style={{ height: 1, background: "var(--jb-line)", margin: "32px 0" }} />
 
           {!item.sold_out && item.color && item.color.length > 0 && (
             <div className="mb-6">
-              <span className="jabal-label">Color</span>
+              <div className="jb-label">Color{color ? ` — ${color}` : ""}</div>
               <div className="flex flex-wrap gap-2">
                 {item.color.map((c) => {
                   const sel = c === color;
@@ -147,11 +155,16 @@ function ProductPage() {
                     <button
                       key={c}
                       onClick={() => setColor(c)}
-                      className="h-[44px] px-4 text-sm font-bold uppercase tracking-[0.1em]"
                       style={{
-                        border: "1.5px solid #000",
-                        background: sel ? "#000" : "#fff",
-                        color: sel ? "#fff" : "#000",
+                        height: 40,
+                        padding: "0 14px",
+                        fontSize: 12,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        border: sel ? "1px solid var(--jb-ink)" : "1px solid var(--jb-line)",
+                        background: "#fff",
+                        color: "var(--jb-ink)",
+                        cursor: "pointer",
                       }}
                     >
                       {c}
@@ -162,42 +175,79 @@ function ProductPage() {
             </div>
           )}
 
+          {!item.sold_out && item.size && item.size.length > 0 && (
+            <div className="mb-6">
+              <div className="jb-label">Size</div>
+              <div className="flex flex-wrap gap-2">
+                {item.size.map((s) => {
+                  const sel = s === size;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setSize(s)}
+                      style={{
+                        minWidth: 48,
+                        height: 44,
+                        padding: "0 14px",
+                        fontSize: 12,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        border: sel ? "1px solid var(--jb-ink)" : "1px solid var(--jb-line)",
+                        background: sel ? "var(--jb-ink)" : "#fff",
+                        color: sel ? "#fff" : "var(--jb-ink)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {!item.sold_out && (
             <div className="mb-6">
-              <span className="jabal-label">Quantity</span>
+              <div className="jb-label">Quantity</div>
               <input
                 type="number"
                 min={1}
                 max={item.stock_quantity}
                 value={qty}
                 onChange={(e) => setQty(Math.max(1, Math.min(item.stock_quantity, Number(e.target.value) || 1)))}
-                className="jabal-input"
+                className="jb-input"
                 style={{ maxWidth: 120 }}
-                disabled={item.sold_out}
               />
-              <div className="mt-2 text-xs opacity-60 uppercase tracking-[0.1em]">
+              <div
+                className="mt-2"
+                style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--jb-muted)" }}
+              >
                 {item.stock_quantity} in stock
               </div>
             </div>
           )}
 
           {item.sold_out ? (
-            <div className="mt-4">
-              <span className="jabal-tag text-sm px-4 py-2">Sold Out</span>
-              <button className="jabal-btn w-full mt-4" disabled>Unavailable</button>
-            </div>
+            <button className="jb-btn w-full mt-4" disabled>Sold out</button>
           ) : (
-            <button className="jabal-btn w-full mt-4" onClick={handleAdd}>
-              Add to Cart
+            <button className="jb-btn w-full mt-4" onClick={handleAdd}>
+              Add to bag
             </button>
           )}
+
+          <div
+            className="mt-6"
+            style={{ fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--jb-muted)" }}
+          >
+            Free shipping above EGP 2,000 · 14-day returns
+          </div>
         </div>
       </div>
 
       {related.length > 0 && (
         <section className="px-6 md:px-12 py-20 max-w-7xl mx-auto w-full">
-          <h2 className="text-3xl md:text-4xl font-black uppercase tracking-[-0.03em] mb-8">You May Also Like</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="jb-eyebrow mb-6">You may also like</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
             {related.map((r) => (
               <ProductCard key={r.id} item={r} />
             ))}
