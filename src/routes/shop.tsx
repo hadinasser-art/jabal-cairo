@@ -8,20 +8,20 @@ export const Route = createFileRoute("/shop")({
   head: () => ({
     meta: [
       { title: "Shop — JABAL" },
-      { name: "description", content: "Shop all JABAL premium activewear." },
+      { name: "description", content: "Shop the latest JABAL collection. Considered essentials from Cairo." },
       { property: "og:title", content: "Shop — JABAL" },
-      { property: "og:description", content: "Shop all JABAL premium activewear." },
+      { property: "og:description", content: "Shop the latest JABAL collection." },
     ],
   }),
   component: ShopPage,
 });
 
-const FILTERS = ["ALL", "TOPS", "BOTTOMS", "OUTERWEAR", "ACCESSORIES"] as const;
+const FILTERS = ["All", "Tops", "Bottoms", "Outerwear", "Accessories"] as const;
 
 function ShopPage() {
   const [items, setItems] = useState<Item[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("ALL");
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
 
   useEffect(() => {
     supabase
@@ -36,27 +36,52 @@ function ShopPage() {
 
   const filtered = useMemo(() => {
     if (!items) return null;
-    if (filter === "ALL") return items;
-    return items.filter((i) => (i.category || "").toUpperCase() === filter);
+    if (filter === "All") return items;
+    return items.filter((i) => (i.category || "").toLowerCase() === filter.toLowerCase());
   }, [items, filter]);
 
   return (
     <Layout>
-      <section className="px-6 md:px-12 py-12 md:py-16 max-w-7xl mx-auto w-full">
-        <h1 className="text-4xl md:text-6xl font-black uppercase tracking-[-0.03em]">All Products</h1>
+      <section className="px-6 md:px-12 pt-12 md:pt-16 pb-6 max-w-7xl mx-auto w-full">
+        <div className="jb-eyebrow">Shop</div>
+        <h1
+          style={{
+            fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
+            fontWeight: 400,
+            letterSpacing: "-0.01em",
+            marginTop: 8,
+          }}
+        >
+          All products
+          {filtered && (
+            <span style={{ color: "var(--jb-muted)", fontSize: 14, marginLeft: 12, letterSpacing: 0 }}>
+              ({filtered.length})
+            </span>
+          )}
+        </h1>
+      </section>
 
-        <div className="mt-8 flex gap-3 overflow-x-auto pb-2 -mx-6 px-6 md:mx-0 md:px-0">
+      <section className="px-6 md:px-12 max-w-7xl mx-auto w-full">
+        <div
+          className="flex gap-6 overflow-x-auto pb-4"
+          style={{ borderBottom: "1px solid var(--jb-line)" }}
+        >
           {FILTERS.map((f) => {
             const active = f === filter;
             return (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className="shrink-0 text-[0.75rem] uppercase tracking-[0.15em] font-bold px-5 py-3"
+                className="shrink-0"
                 style={{
-                  background: active ? "#000" : "#fff",
-                  color: active ? "#fff" : "#000",
-                  border: "1.5px solid #000",
+                  fontSize: 12,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  fontWeight: 400,
+                  color: active ? "var(--jb-ink)" : "var(--jb-muted)",
+                  paddingBottom: 6,
+                  borderBottom: active ? "1px solid var(--jb-ink)" : "1px solid transparent",
+                  background: "transparent",
                 }}
               >
                 {f}
@@ -68,25 +93,28 @@ function ShopPage() {
         {err && <div className="mt-8"><ErrorBanner /></div>}
 
         {!filtered && !err && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mt-10">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 mt-10">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i}>
                 <Skeleton className="aspect-[3/4] w-full" />
-                <Skeleton className="h-4 w-3/4 mt-3" />
-                <Skeleton className="h-4 w-1/3 mt-2" />
+                <Skeleton className="h-3 w-2/3 mt-3" />
+                <Skeleton className="h-3 w-1/4 mt-2" />
               </div>
             ))}
           </div>
         )}
 
         {filtered && filtered.length === 0 && (
-          <div className="mt-16 text-center uppercase tracking-[0.15em] text-sm font-bold opacity-60">
+          <div
+            className="mt-24 text-center"
+            style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--jb-muted)" }}
+          >
             No products in this category.
           </div>
         )}
 
         {filtered && filtered.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mt-10">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 mt-10">
             {filtered.map((it) => (
               <ProductCard key={it.id} item={it} />
             ))}
