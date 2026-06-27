@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Layout, Skeleton, ErrorBanner } from "@/components/Layout";
-import { supabase, type Item, formatPrice } from "@/lib/supabase";
+import { useEffect } from "react";
+import { Layout } from "@/components/Layout";
+import { type Item, formatPrice } from "@/lib/supabase";
 import { useCart } from "@/lib/cart";
 import { notifyAddedToBag } from "@/lib/notify";
 
@@ -18,20 +18,15 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [items, setItems] = useState<Item[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
+  // Scroll to hash anchor (#men / #women) when landing on the homepage with a hash
   useEffect(() => {
-    supabase
-      .from("items")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(8)
-      .then(({ data, error }) => {
-        if (error) setErr(error.message);
-        else setItems(data as Item[]);
-      });
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash?.slice(1);
+    if (!hash) return;
+    const el = document.getElementById(hash);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
+
 
   return (
     <Layout>
