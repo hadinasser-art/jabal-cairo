@@ -1,78 +1,64 @@
 import { toast } from "sonner";
 
+const TOAST_ID = "jabal-added-to-bag";
+
 export function notifyAddedToBag(opts: {
   name: string;
   size?: string | null;
   color?: string | null;
   onView: () => void;
+  t: (k: string) => string;
 }) {
   toast.custom(
     (id) => (
-      <div style={{ minWidth: 320, maxWidth: 380 }}>
+      <div style={{ minWidth: 300, maxWidth: 360 }}>
         <div
           style={{
             fontSize: 11,
             letterSpacing: "0.2em",
             textTransform: "uppercase",
-            color: "#555",
+            color: "#9a9a9a",
             marginBottom: 6,
           }}
         >
-          Added to bag
+          {opts.t("toast.added")}
         </div>
-        <div style={{ fontSize: 14, color: "#111", fontWeight: 500 }}>{opts.name}</div>
+        <div style={{ fontSize: 14, color: "#fff", fontWeight: 500 }}>{opts.name}</div>
         {(opts.size || opts.color) && (
           <div
             style={{
               fontSize: 11,
               letterSpacing: "0.15em",
               textTransform: "uppercase",
-              color: "#555",
+              color: "#9a9a9a",
               marginTop: 4,
             }}
           >
             {[opts.size, opts.color].filter(Boolean).join(" · ")}
           </div>
         )}
-        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <button
-            onClick={() => {
-              opts.onView();
-              toast.dismiss(id);
-            }}
-            style={{
-              flex: 1,
-              background: "#111",
-              color: "#fff",
-              border: "1px solid #111",
-              padding: "10px 14px",
-              fontSize: 11,
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-            }}
-          >
-            View bag
-          </button>
-          <button
-            onClick={() => toast.dismiss(id)}
-            style={{
-              flex: 1,
-              background: "#fff",
-              color: "#111",
-              border: "1px solid #111",
-              padding: "10px 14px",
-              fontSize: 11,
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-            }}
-          >
-            Continue
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            opts.onView();
+            toast.dismiss(id);
+          }}
+          style={{
+            marginTop: 14,
+            width: "100%",
+            background: "#fff",
+            color: "#000",
+            border: "1px solid #fff",
+            padding: "10px 14px",
+            fontSize: 11,
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+          }}
+        >
+          {opts.t("toast.view")}
+        </button>
       </div>
     ),
-    { duration: 5000 },
+    { id: TOAST_ID, duration: 5000 },
   );
 }
