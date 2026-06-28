@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Layout, Skeleton, ErrorBanner } from "@/components/Layout";
 import { supabase, type Item } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 import { ProductCard } from "./index";
 
 export const Route = createFileRoute("/shop")({
@@ -30,6 +31,7 @@ const FILTERS = [
 
 
 function ShopPage() {
+  const { t } = useI18n();
   const [items, setItems] = useState<Item[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
@@ -54,16 +56,17 @@ function ShopPage() {
   return (
     <Layout>
       <section className="px-6 md:px-12 pt-12 md:pt-16 pb-6 max-w-7xl mx-auto w-full">
-        <div className="jb-eyebrow">Shop</div>
+        <div className="jb-eyebrow">{t("shop.eyebrow")}</div>
         <h1
           style={{
             fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
             fontWeight: 400,
             letterSpacing: "-0.01em",
             marginTop: 8,
+            color: "#fff",
           }}
         >
-          All products
+          {t("shop.title")}
           {filtered && (
             <span style={{ color: "var(--jb-muted)", fontSize: 14, marginLeft: 12, letterSpacing: 0 }}>
               ({filtered.length})
@@ -120,7 +123,7 @@ function ShopPage() {
             className="mt-24 text-center"
             style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--jb-muted)" }}
           >
-            No products in this category.
+            {t("shop.empty")}
           </div>
         )}
 

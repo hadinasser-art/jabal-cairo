@@ -4,6 +4,7 @@ import { Layout, Skeleton, ErrorBanner } from "@/components/Layout";
 import { supabase, type Item, formatPrice } from "@/lib/supabase";
 import { useCart } from "@/lib/cart";
 import { notifyAddedToBag } from "@/lib/notify";
+import { useI18n } from "@/lib/i18n";
 import { ProductCard } from "./index";
 
 export const Route = createFileRoute("/product/$id")({
@@ -14,12 +15,14 @@ function ProductPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { addItem } = useCart();
+  const { t } = useI18n();
   const [item, setItem] = useState<Item | null>(null);
   const [related, setRelated] = useState<Item[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [size, setSize] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
+  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
     setItem(null);
@@ -35,8 +38,8 @@ function ProductPage() {
           const it = data as Item | null;
           setItem(it);
           if (it) {
-            setSize(it.size?.[0] ?? null);
-            setColor(it.color?.[0] ?? null);
+            setSize(it.size && it.size.length === 1 ? it.size[0] : null);
+            setColor(it.color && it.color.length === 1 ? it.color[0] : null);
             if (it.category) {
               supabase
                 .from("items")
@@ -67,7 +70,18 @@ function ProductPage() {
       </Layout>
     );
 
+  const soldOut = item.sold_out || item.stock_quantity <= 0;
+
   const handleAdd = () => {
+    setWarning(null);
+    if (item.size && item.size.length > 0 && !size) {
+      setWarning(t("pdp.selectsize"));
+      return;
+    }
+    if (item.color && item.color.length > 0 && !color) {
+      setWarning(t("pdp.selectcolor"));
+      return;
+    }
     addItem({
       id: item.id,
       name: item.name,
@@ -83,19 +97,19 @@ function ProductPage() {
       size,
       color,
       onView: () => navigate({ to: "/cart" }),
+      t,
     });
   };
 
   return (
     <Layout>
-      {/* Breadcrumb */}
       <div
         className="px-6 md:px-12 pt-6 max-w-[1600px] mx-auto"
         style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--jb-muted)" }}
       >
-        <Link to="/" style={{ color: "var(--jb-muted)" }}>Home</Link>
+        <Link to="/" style={{ color: "var(--jb-muted)" }}>{t("nav.shop")}</Link>
         <span style={{ margin: "0 8px" }}>/</span>
-        <Link to="/shop" style={{ color: "var(--jb-muted)" }}>Shop</Link>
+        <Link to="/shop" style={{ color: "var(--jb-muted)" }}>{t("nav.shop")}</Link>
         {item.category && (
           <>
             <span style={{ margin: "0 8px" }}>/</span>
@@ -115,8 +129,8 @@ function ProductPage() {
           ) : (
             <div className="aspect-[3/4]" style={{ background: "var(--jb-product-bg)" }} />
           )}
-          {item.sold_out && (
-            <div className="pc-soldout" style={{ fontSize: 13 }}>Sold out</div>
+          {soldOut && (
+            <div className="pc-soldout" style={{ fontSize: 13 }}>{t("card.soldout")}</div>
           )}
         </div>
 
@@ -145,9 +159,9 @@ function ProductPage() {
 
           <div style={{ height: 1, background: "var(--jb-line)", margin: "32px 0" }} />
 
-          {!item.sold_out && item.color && item.color.length > 0 && (
+          {!soldOut && item.color && item.color.length > 0 && (
             <div className="mb-6">
-              <div className="jb-label">Color{color ? ` — ${color}` : ""}</div>
+              <div className="jb-label">{t("pdp.color")}{color ? ` — ${color}` : ""}</div>
               <div className="flex flex-wrap gap-2">
                 {item.color.map((c) => {
                   const sel = c === color;
@@ -161,9 +175,9 @@ function ProductPage() {
                         fontSize: 12,
                         letterSpacing: "0.12em",
                         textTransform: "uppercase",
-                        border: sel ? "1px solid var(--jb-ink)" : "1px solid var(--jb-line)",
-                        background: "#fff",
-                        color: "var(--jb-ink)",
+                        border: sel ? "1px solid #fff" : "1px solid var(--jb-line)",
+                        background: "transparent",
+                        color: "#fff",
                         cursor: "pointer",
                       }}
                     >
@@ -175,9 +189,9 @@ function ProductPage() {
             </div>
           )}
 
-          {!item.sold_out && item.size && item.size.length > 0 && (
+          {!soldOut && item.size && item.size.length > 0 && (
             <div className="mb-6">
-              <div className="jb-label">Size</div>
+              <div className="jb-label">{t("pdp.size")}</div>
               <div className="flex flex-wrap gap-2">
                 {item.size.map((s) => {
                   const sel = s === size;
@@ -192,9 +206,9 @@ function ProductPage() {
                         fontSize: 12,
                         letterSpacing: "0.12em",
                         textTransform: "uppercase",
-                        border: sel ? "1px solid var(--jb-ink)" : "1px solid var(--jb-line)",
-                        background: sel ? "var(--jb-ink)" : "#fff",
-                        color: sel ? "#fff" : "var(--jb-ink)",
+                        border: sel ? "1px solid #fff" : "1px solid var(--jb-line)",
+                        background: sel ? "#fff" : "transparent",
+                        color: sel ? "#000" : "#fff",
                         cursor: "pointer",
                       }}
                     >
@@ -206,9 +220,9 @@ function ProductPage() {
             </div>
           )}
 
-          {!item.sold_out && (
+          {!soldOut && (
             <div className="mb-6">
-              <div className="jb-label">Quantity</div>
+              <div className="jb-label">{t("pdp.qty")}</div>
               <input
                 type="number"
                 min={1}
@@ -222,16 +236,32 @@ function ProductPage() {
                 className="mt-2"
                 style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--jb-muted)" }}
               >
-                {item.stock_quantity} in stock
+                {item.stock_quantity} {t("pdp.instock")}
               </div>
             </div>
           )}
 
-          {item.sold_out ? (
-            <button className="jb-btn w-full mt-4" disabled>Sold out</button>
+          {warning && (
+            <div
+              className="mb-4"
+              style={{
+                border: "1px solid #fff",
+                padding: "10px 14px",
+                fontSize: 12,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "#fff",
+              }}
+            >
+              {warning}
+            </div>
+          )}
+
+          {soldOut ? (
+            <button className="jb-btn w-full mt-4" disabled>{t("card.soldout")}</button>
           ) : (
             <button className="jb-btn w-full mt-4" onClick={handleAdd}>
-              Add to bag
+              {t("pdp.addbag")}
             </button>
           )}
 
@@ -239,14 +269,14 @@ function ProductPage() {
             className="mt-6"
             style={{ fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--jb-muted)" }}
           >
-            Free shipping above EGP 2,000 · 14-day returns
+            {t("pdp.ship")}
           </div>
         </div>
       </div>
 
       {related.length > 0 && (
         <section className="px-6 md:px-12 py-20 max-w-7xl mx-auto w-full">
-          <div className="jb-eyebrow mb-6">You may also like</div>
+          <div className="jb-eyebrow mb-6">{t("section.viewall")}</div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
             {related.map((r) => (
               <ProductCard key={r.id} item={r} />
