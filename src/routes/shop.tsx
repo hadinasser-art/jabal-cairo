@@ -123,7 +123,7 @@ function ShopPage() {
             className="mt-24 text-center"
             style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--jb-muted)" }}
           >
-            No products in this category.
+            {t("shop.empty")}
           </div>
         )}
 
