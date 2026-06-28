@@ -31,6 +31,7 @@ const FILTERS = [
 
 
 function ShopPage() {
+  const { t } = useI18n();
   const [items, setItems] = useState<Item[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
