@@ -56,16 +56,17 @@ function ShopPage() {
   return (
     <Layout>
       <section className="px-6 md:px-12 pt-12 md:pt-16 pb-6 max-w-7xl mx-auto w-full">
-        <div className="jb-eyebrow">Shop</div>
+        <div className="jb-eyebrow">{t("shop.eyebrow")}</div>
         <h1
           style={{
             fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
             fontWeight: 400,
             letterSpacing: "-0.01em",
             marginTop: 8,
+            color: "#fff",
           }}
         >
-          All products
+          {t("shop.title")}
           {filtered && (
             <span style={{ color: "var(--jb-muted)", fontSize: 14, marginLeft: 12, letterSpacing: 0 }}>
               ({filtered.length})
