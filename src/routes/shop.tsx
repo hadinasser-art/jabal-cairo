@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Layout, Skeleton, ErrorBanner } from "@/components/Layout";
 import { supabase, type Item } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 import { ProductCard } from "./index";
 
 export const Route = createFileRoute("/shop")({
