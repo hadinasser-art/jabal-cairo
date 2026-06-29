@@ -1,31 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Layout, Skeleton } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
-import { fetchAllItems } from "@/lib/items";
-import type { Item } from "@/lib/supabase";
+import { fetchItemsByGender } from "@/lib/items";
+import type { Gender, Item } from "@/lib/supabase";
 
-export const Route = createFileRoute("/shop")({
-  head: () => ({
-    meta: [
-      { title: "Shop — JABAL" },
-      { name: "description", content: "Shop the JABAL collection." },
-    ],
-  }),
-  component: ShopPage,
-});
-
-function ShopPage() {
+export function CollectionPage({ gender, title, eyebrow }: { gender: Gender; title: string; eyebrow: string }) {
   const [items, setItems] = useState<Item[] | null>(null);
-  useEffect(() => { fetchAllItems().then(setItems); }, []);
+  useEffect(() => { fetchItemsByGender(gender).then(setItems); }, [gender]);
 
   return (
     <Layout>
       <section className="px-6 md:px-12 pt-12 md:pt-16 pb-8 max-w-7xl mx-auto w-full">
-        <div className="jb-eyebrow">Shop</div>
+        <div className="jb-eyebrow">{eyebrow}</div>
         <h1 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)", fontWeight: 300, letterSpacing: "-0.01em", marginTop: 8, color: "#fff" }}>
-          All products
-          {items && <span style={{ color: "#9a9a9a", fontSize: 14, marginLeft: 12, letterSpacing: 0 }}>({items.length})</span>}
+          {title}
+          {items && (
+            <span style={{ color: "#9a9a9a", fontSize: 14, marginLeft: 12, letterSpacing: 0 }}>({items.length})</span>
+          )}
         </h1>
       </section>
       <section className="px-6 md:px-12 pb-16 max-w-7xl mx-auto w-full">
@@ -38,6 +29,10 @@ function ShopPage() {
                 <Skeleton className="h-3 w-1/4 mt-2" />
               </div>
             ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="text-center" style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9a9a9a", padding: "80px 0" }}>
+            No products yet.
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">

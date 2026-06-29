@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/Layout";
-import { formatPrice } from "@/lib/supabase";
-import { useI18n } from "@/lib/i18n";
+import { formatPrice, JABAL_SUPPORT_EMAIL } from "@/lib/supabase";
 
 type Search = { order_id?: string };
 
@@ -15,14 +14,15 @@ export const Route = createFileRoute("/confirmation")({
 
 type StoredOrder = {
   order_id: string;
-  items: { name: string; quantity: number; price_egp: number; selectedSize: string | null; selectedColor: string | null }[];
+  items: { name: string; quantity: number; price_egp: number; selectedSize: string | null; selectedColor: string | null; image_url?: string | null }[];
+  subtotal?: number;
+  discount?: number;
   total: number;
   payment_method?: "cod" | "instapay";
 };
 
 function ConfirmationPage() {
   const { order_id } = Route.useSearch();
-  const { t } = useI18n();
   const orderId = order_id || "JBL-XXXX";
   const [stored, setStored] = useState<StoredOrder | null>(null);
   const [copied, setCopied] = useState(false);
@@ -47,110 +47,68 @@ function ConfirmationPage() {
   return (
     <Layout>
       <div className="max-w-[680px] mx-auto px-6 md:px-10 py-16 md:py-20">
-        <div className="jb-eyebrow">{t("ok.eyebrow")}</div>
-        <h1
-          style={{
-            marginTop: 12,
-            fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
-            fontWeight: 400,
-            letterSpacing: "-0.01em",
-            color: "var(--jb-ink)",
-          }}
-        >
-          {t("ok.title")}
+        <div className="jb-eyebrow">Order confirmed</div>
+        <h1 style={{ marginTop: 12, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", fontWeight: 300, color: "#fff" }}>
+          Thank you for your order.
         </h1>
 
-        <div
-          className="mt-8 p-6"
-          style={{ background: "var(--jb-bg-warm)", border: "1px solid var(--jb-line)" }}
-        >
-          <div className="jb-eyebrow">{t("ok.orderid")}</div>
-          <div
-            className="mt-2"
-            style={{ fontSize: 24, letterSpacing: "0.05em", color: "var(--jb-ink)", fontWeight: 500 }}
-          >
-            {orderId}
-          </div>
-          <button
-            type="button"
-            onClick={copy}
-            style={{
-              marginTop: 10,
-              fontSize: 12,
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              color: "var(--jb-ink)",
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              textDecoration: "underline",
-              textUnderlineOffset: 4,
-            }}
-          >
-            {copied ? t("ok.copied") : t("ok.copy")}
+        <div className="mt-8 p-6" style={{ background: "#0a0a0a", border: "1px solid #262626" }}>
+          <div className="jb-eyebrow">Order ID</div>
+          <div className="mt-2" style={{ fontSize: 24, letterSpacing: "0.05em", color: "#fff", fontWeight: 500 }}>{orderId}</div>
+          <button onClick={copy} style={{ marginTop: 10, fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "#fff", background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 4 }}>
+            {copied ? "Copied ✓" : "Tap to copy"}
           </button>
         </div>
 
-        <div style={{ height: 1, background: "var(--jb-line)", margin: "32px 0" }} />
-
-        <div
-          className="p-6 md:p-8"
-          style={{ background: "#fff", color: "#000" }}
-        >
-          <div
-            style={{ fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "#555" }}
-          >
-            {isInstapay ? t("pay.instapay") : t("pay.cod")}
+        <div className="mt-8 p-6 md:p-8" style={{ background: "#fff", color: "#000" }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "#555" }}>
+            {isInstapay ? "InstaPay" : "Cash on Delivery"}
           </div>
           <div style={{ marginTop: 12, fontSize: 16, lineHeight: 1.6 }}>
-            {isInstapay ? t("pay.instapay.note") : t("pay.cod.note")}
+            {isInstapay ? "Send the InstaPay transfer to: 01061024345" : "You will pay when your order arrives."}
           </div>
-          {isInstapay && (
-            <div
-              className="mt-4 pt-4"
-              style={{ borderTop: "1px solid #e5e5e5", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "#555" }}
-            >
-              {t("ok.orderid")}: {orderId}
-            </div>
-          )}
         </div>
 
         {stored && stored.items.length > 0 && (
           <>
-            <div style={{ height: 1, background: "var(--jb-line)", margin: "32px 0" }} />
-            <div className="jb-eyebrow">{t("cart.summary")}</div>
-            <div className="mt-4" style={{ border: "1px solid var(--jb-line)" }}>
+            <div className="jb-eyebrow mt-10">Summary</div>
+            <div className="mt-4" style={{ border: "1px solid #262626" }}>
               {stored.items.map((it, idx) => (
-                <div
-                  key={idx}
-                  className="flex justify-between p-4"
-                  style={{ borderBottom: "1px solid var(--jb-line)", fontSize: 14 }}
-                >
+                <div key={idx} className="flex justify-between p-4" style={{ borderBottom: "1px solid #262626", fontSize: 14 }}>
                   <div>
-                    <div style={{ color: "var(--jb-ink)" }}>{it.name}</div>
-                    <div
-                      className="mt-1"
-                      style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--jb-muted)" }}
-                    >
-                      {[it.selectedSize, it.selectedColor].filter(Boolean).join(" · ")} · {t("cart.qty")} {it.quantity}
+                    <div style={{ color: "#fff" }}>{it.name}</div>
+                    <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "#9a9a9a", marginTop: 4 }}>
+                      {[it.selectedSize, it.selectedColor].filter(Boolean).join(" · ")} · Qty {it.quantity}
                     </div>
                   </div>
-                  <div style={{ color: "var(--jb-ink)" }}>{formatPrice(it.price_egp * it.quantity)}</div>
+                  <div style={{ color: "#fff" }}>{formatPrice(it.price_egp * it.quantity)}</div>
                 </div>
               ))}
-              <div
-                className="flex justify-between p-4"
-                style={{ background: "var(--jb-bg-warm)", fontSize: 14 }}
-              >
-                <div style={{ color: "var(--jb-ink)" }}>{t("cart.total")}</div>
-                <div style={{ color: "var(--jb-ink)" }}>{formatPrice(stored.total)}</div>
+              {typeof stored.subtotal === "number" && (
+                <div className="flex justify-between p-4" style={{ borderBottom: "1px solid #262626", fontSize: 13, color: "#9a9a9a" }}>
+                  <span>Subtotal</span><span style={{ color: "#fff" }}>{formatPrice(stored.subtotal)}</span>
+                </div>
+              )}
+              {typeof stored.discount === "number" && stored.discount > 0 && (
+                <div className="flex justify-between p-4" style={{ borderBottom: "1px solid #262626", fontSize: 13, color: "#9a9a9a" }}>
+                  <span>Discount</span><span style={{ color: "#fff" }}>− {formatPrice(stored.discount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between p-4" style={{ background: "#0a0a0a", fontSize: 14 }}>
+                <div style={{ color: "#fff" }}>Total</div>
+                <div style={{ color: "#fff" }}>{formatPrice(stored.total)}</div>
               </div>
             </div>
           </>
         )}
 
-        <div className="mt-10">
-          <Link to="/shop" className="jb-btn">{t("ok.continue")}</Link>
+        <div className="mt-10 flex flex-wrap gap-3">
+          <Link to="/shop" className="jb-btn">Continue shopping</Link>
+          <Link to="/account" className="jb-btn-ghost">View orders</Link>
+        </div>
+
+        <div style={{ marginTop: 28, fontSize: 12, color: "#9a9a9a" }}>
+          Need help? <a href={`mailto:${JABAL_SUPPORT_EMAIL}`} style={{ color: "#fff" }} className="hover:underline">{JABAL_SUPPORT_EMAIL}</a>
         </div>
       </div>
     </Layout>

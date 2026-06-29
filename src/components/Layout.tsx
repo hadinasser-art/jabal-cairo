@@ -1,139 +1,103 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useCart } from "@/lib/cart";
-import { useI18n, type Lang } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
+import { JABAL_LOGO_URL, JABAL_SUPPORT_EMAIL, JABAL_SUPPORT_PHONE } from "@/lib/supabase";
 
 export function Layout({ children }: { children: ReactNode }) {
   const { count } = useCart();
-  const { t, lang, setLang, dir } = useI18n();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement | null>(null);
+  const [shopOpen, setShopOpen] = useState(false);
+  const shopRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
+      if (shopRef.current && !shopRef.current.contains(e.target as Node)) setShopOpen(false);
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  return (
-    <div
-      className="min-h-screen flex flex-col"
-      dir={dir}
-      style={{ background: "var(--jb-bg)", color: "var(--jb-ink)" }}
-    >
-      {/* Promo strip */}
-      <div
-        className="text-center px-4"
-        style={{
-          background: "#fff",
-          color: "#000",
-          fontSize: "11px",
-          letterSpacing: lang === "ar" ? "0" : "0.15em",
-          textTransform: "uppercase",
-          padding: "8px 16px",
-          fontWeight: 500,
-        }}
-      >
-        {t("promo")}
-      </div>
+  const handleLogout = async () => {
+    await signOut();
+    navigate({ to: "/" });
+  };
 
-      {/* Nav */}
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: "#000", color: "#fff" }}>
       <nav
         className="sticky top-0 z-[100] flex items-center justify-between px-5 md:px-10"
-        style={{
-          background: "#000",
-          borderBottom: "1px solid var(--jb-line)",
-          height: "64px",
-        }}
+        style={{ background: "#000", borderBottom: "1px solid #262626", height: 72 }}
       >
-        <Link
-          to="/"
-          style={{
-            fontSize: "18px",
-            letterSpacing: "0.22em",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            color: "#fff",
-          }}
-        >
-          JABAL
+        <Link to="/" className="flex items-center" style={{ height: 40 }}>
+          <img src={JABAL_LOGO_URL} alt="JABAL" style={{ height: 32, width: "auto", filter: "invert(1) brightness(2)" }} />
         </Link>
 
         <div
-          className="hidden md:flex gap-10 items-center"
-          style={{ fontSize: "12px", letterSpacing: lang === "ar" ? "0" : "0.18em", textTransform: "uppercase", fontWeight: 400 }}
+          className="hidden md:flex gap-8 items-center"
+          style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 400 }}
         >
-          <Link to="/" hash="men" className="hover:underline" style={{ textUnderlineOffset: 4, color: "#fff" }}>{t("nav.men")}</Link>
-          <Link to="/" hash="women" className="hover:underline" style={{ textUnderlineOffset: 4, color: "#fff" }}>{t("nav.women")}</Link>
-          <Link to="/shop" className="hover:underline" style={{ textUnderlineOffset: 4, color: "#fff" }}>{t("nav.shop")}</Link>
-        </div>
-
-        <div className="flex items-center gap-5">
-          {/* Language dropdown */}
-          <div className="relative" ref={langRef}>
-            <button
-              type="button"
-              onClick={() => setLangOpen((v) => !v)}
-              aria-label={t("lang.label")}
-              style={{
-                fontSize: 11,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "#fff",
-                background: "transparent",
-                border: "1px solid var(--jb-line)",
-                padding: "6px 10px",
-                cursor: "pointer",
-              }}
+          <Link to="/men" className="hover:underline" style={{ color: "#fff", textUnderlineOffset: 4 }}>Men</Link>
+          <Link to="/women" className="hover:underline" style={{ color: "#fff", textUnderlineOffset: 4 }}>Women</Link>
+          <div
+            ref={shopRef}
+            className="relative"
+            onMouseEnter={() => setShopOpen(true)}
+            onMouseLeave={() => setShopOpen(false)}
+          >
+            <Link
+              to="/shop"
+              className="hover:underline"
+              style={{ color: "#fff", textUnderlineOffset: 4 }}
+              onClick={() => setShopOpen(false)}
             >
-              {lang === "en" ? "EN" : "ع"}
-            </button>
-            {langOpen && (
+              Shop ▾
+            </Link>
+            {shopOpen && (
               <div
-                className="absolute"
                 style={{
-                  top: "calc(100% + 6px)",
-                  right: dir === "rtl" ? "auto" : 0,
-                  left: dir === "rtl" ? 0 : "auto",
-                  background: "#000",
-                  border: "1px solid var(--jb-line)",
-                  minWidth: 140,
-                  zIndex: 200,
+                  position: "absolute", top: "100%", left: 0, marginTop: 8,
+                  background: "#000", border: "1px solid #fff", minWidth: 200, zIndex: 200,
                 }}
               >
-                {(["en", "ar"] as Lang[]).map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => { setLang(l); setLangOpen(false); }}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      textAlign: dir === "rtl" ? "right" : "left",
-                      padding: "10px 14px",
-                      fontSize: 12,
-                      letterSpacing: lang === "ar" ? "0" : "0.12em",
-                      textTransform: "uppercase",
-                      color: l === lang ? "#fff" : "#9a9a9a",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {l === "en" ? "English" : "العربية"}
-                  </button>
-                ))}
+                <Link
+                  to="/men"
+                  onClick={() => setShopOpen(false)}
+                  style={{ display: "block", padding: "14px 18px", color: "#fff", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", borderBottom: "1px solid #262626" }}
+                >Shop Men</Link>
+                <Link
+                  to="/women"
+                  onClick={() => setShopOpen(false)}
+                  style={{ display: "block", padding: "14px 18px", color: "#fff", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase" }}
+                >Shop Women</Link>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Bag icon */}
+        <div className="flex items-center gap-4 md:gap-5">
+          <div className="hidden md:flex items-center gap-4" style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase" }}>
+            {user ? (
+              <>
+                <Link to="/account" style={{ color: "#fff" }} className="hover:underline">My Account</Link>
+                <button onClick={handleLogout} style={{ background: "transparent", border: "none", color: "#9a9a9a", cursor: "pointer", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase" }}>
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" style={{ color: "#fff" }} className="hover:underline">Login</Link>
+                <Link to="/register" style={{ color: "#fff" }} className="hover:underline">Register</Link>
+              </>
+            )}
+          </div>
+
           <Link
             to="/cart"
             className="relative inline-flex items-center justify-center"
-            aria-label={t("nav.bag")}
+            aria-label="Bag"
             style={{ color: "#fff", width: 32, height: 32 }}
           >
             <BagIcon />
@@ -141,21 +105,10 @@ export function Layout({ children }: { children: ReactNode }) {
               <span
                 className="absolute"
                 style={{
-                  top: -4,
-                  right: -6,
-                  minWidth: 18,
-                  height: 18,
-                  padding: "0 5px",
-                  borderRadius: 999,
-                  background: "#fff",
-                  color: "#000",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  letterSpacing: 0,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  lineHeight: 1,
+                  top: -4, right: -6, minWidth: 18, height: 18, padding: "0 5px",
+                  borderRadius: 999, background: "#fff", color: "#000",
+                  fontSize: 10, fontWeight: 600, display: "inline-flex",
+                  alignItems: "center", justifyContent: "center", lineHeight: 1,
                 }}
               >
                 {count}
@@ -175,58 +128,55 @@ export function Layout({ children }: { children: ReactNode }) {
       </nav>
 
       {open && (
-        <div
-          className="md:hidden flex flex-col"
-          style={{ background: "#000", borderBottom: "1px solid var(--jb-line)" }}
-        >
+        <div className="md:hidden flex flex-col" style={{ background: "#000", borderBottom: "1px solid #262626" }}>
           {[
-            { to: "/" as const, hash: "men", label: t("nav.men") },
-            { to: "/" as const, hash: "women", label: t("nav.women") },
-            { to: "/shop" as const, hash: undefined, label: t("nav.shop") },
-          ].map((l, i) => (
+            { to: "/men", label: "Men" },
+            { to: "/women", label: "Women" },
+            { to: "/shop", label: "Shop" },
+          ].map((l) => (
             <Link
-              key={i}
+              key={l.to}
               to={l.to}
-              hash={l.hash}
               onClick={() => setOpen(false)}
-              style={{
-                padding: "16px 20px",
-                fontSize: 12,
-                letterSpacing: lang === "ar" ? "0" : "0.18em",
-                textTransform: "uppercase",
-                borderBottom: "1px solid var(--jb-line)",
-                color: "#fff",
-              }}
+              style={{ padding: "16px 20px", fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", borderBottom: "1px solid #262626", color: "#fff" }}
             >
               {l.label}
             </Link>
           ))}
+          {user ? (
+            <>
+              <Link to="/account" onClick={() => setOpen(false)} style={mobileItem}>My Account</Link>
+              <button onClick={() => { setOpen(false); handleLogout(); }} style={{ ...mobileItem, textAlign: "left", background: "transparent", border: "none" }}>Logout</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" onClick={() => setOpen(false)} style={mobileItem}>Login</Link>
+              <Link to="/register" onClick={() => setOpen(false)} style={mobileItem}>Register</Link>
+            </>
+          )}
         </div>
       )}
 
       <main className="flex-1">{children}</main>
 
-      {/* Simple Footer */}
-      <footer style={{ background: "#000", borderTop: "1px solid var(--jb-line)", marginTop: 80 }}>
+      <footer style={{ background: "#000", borderTop: "1px solid #262626", marginTop: 80 }}>
         <div className="max-w-6xl mx-auto px-6 md:px-12 py-12">
           <div className="grid md:grid-cols-2 gap-10">
             <div>
-              <div style={{ fontSize: 18, letterSpacing: "0.22em", textTransform: "uppercase", fontWeight: 600, color: "#fff" }}>
-                JABAL
-              </div>
-              <div className="jb-eyebrow mt-3">{t("footer.location")}</div>
+              <img src={JABAL_LOGO_URL} alt="JABAL" style={{ height: 28, filter: "invert(1) brightness(2)" }} />
+              <div className="jb-eyebrow mt-3">Cairo, Egypt</div>
             </div>
             <div>
-              <div className="jb-eyebrow" style={{ color: "#fff" }}>{t("footer.help")}</div>
-              <ul className="mt-4 space-y-2" style={{ fontSize: 13, color: "var(--jb-muted)" }}>
+              <div className="jb-eyebrow" style={{ color: "#fff" }}>Help</div>
+              <ul className="mt-4 space-y-2" style={{ fontSize: 13, color: "#9a9a9a" }}>
                 <li>
-                  <a href="mailto:Amirasedik24@gmail.com" className="hover:underline" style={{ color: "var(--jb-muted)" }}>
-                    {t("footer.email")}: Amirasedik24@gmail.com
+                  <a href={`mailto:${JABAL_SUPPORT_EMAIL}`} className="hover:underline" style={{ color: "#9a9a9a" }}>
+                    {JABAL_SUPPORT_EMAIL}
                   </a>
                 </li>
                 <li>
-                  <a href="tel:01061024345" className="hover:underline" style={{ color: "var(--jb-muted)" }}>
-                    {t("footer.phone")}: 01061024345
+                  <a href={`tel:${JABAL_SUPPORT_PHONE}`} className="hover:underline" style={{ color: "#9a9a9a" }}>
+                    {JABAL_SUPPORT_PHONE}
                   </a>
                 </li>
               </ul>
@@ -234,16 +184,22 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
           <div
             className="mt-10 pt-6 flex flex-col md:flex-row justify-between gap-3"
-            style={{ borderTop: "1px solid var(--jb-line)", fontSize: 11, letterSpacing: lang === "ar" ? "0" : "0.15em", textTransform: "uppercase", color: "var(--jb-muted)" }}
+            style={{ borderTop: "1px solid #262626", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "#9a9a9a" }}
           >
-            <div>© {new Date().getFullYear()} JABAL. {t("footer.rights")}</div>
-            <div>{t("footer.location")}</div>
+            <div>© {new Date().getFullYear()} JABAL. All rights reserved.</div>
+            <div>Cairo, Egypt</div>
           </div>
         </div>
       </footer>
     </div>
   );
 }
+
+const mobileItem: React.CSSProperties = {
+  padding: "16px 20px", fontSize: 12, letterSpacing: "0.18em",
+  textTransform: "uppercase", borderBottom: "1px solid #262626", color: "#fff",
+  display: "block", width: "100%",
+};
 
 function BagIcon() {
   return (
@@ -260,17 +216,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 
 export function ErrorBanner({ message = "Something went wrong. Please refresh." }: { message?: string }) {
   return (
-    <div
-      style={{
-        background: "transparent",
-        border: "1px solid #fff",
-        padding: "14px 18px",
-        fontSize: 12,
-        letterSpacing: "0.15em",
-        textTransform: "uppercase",
-        color: "#fff",
-      }}
-    >
+    <div style={{ border: "1px solid #fff", padding: "14px 18px", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "#fff" }}>
       {message}
     </div>
   );

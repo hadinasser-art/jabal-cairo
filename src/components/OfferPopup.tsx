@@ -1,0 +1,103 @@
+import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { fetchActivePopupOffer, type Offer } from "@/lib/offer";
+import { useAuth } from "@/lib/auth";
+import { JABAL_LOGO_URL } from "@/lib/supabase";
+
+const KEY = "jabal_offer_popup_dismissed";
+
+export function OfferPopup() {
+  const { user, loading } = useAuth();
+  const [offer, setOffer] = useState<Offer | null>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (loading || user) return;
+    let dismissed = false;
+    try { dismissed = localStorage.getItem(KEY) === "1"; } catch {}
+    if (dismissed) return;
+    let t: ReturnType<typeof setTimeout>;
+    fetchActivePopupOffer().then((o) => {
+      if (!o) return;
+      setOffer(o);
+      t = setTimeout(() => setOpen(true), 2000);
+    });
+    return () => { if (t) clearTimeout(t); };
+  }, [user, loading]);
+
+  const close = () => {
+    setOpen(false);
+    try { localStorage.setItem(KEY, "1"); } catch {}
+  };
+
+  if (!open || !offer) return null;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: "fixed", inset: 0, zIndex: 500,
+        background: "rgba(0,0,0,0.75)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16,
+      }}
+      onClick={close}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 460, background: "#000",
+          border: "1px solid #fff", padding: "40px 32px", position: "relative",
+          color: "#fff",
+        }}
+      >
+        <button
+          aria-label="Close"
+          onClick={close}
+          style={{
+            position: "absolute", top: 12, right: 12,
+            background: "transparent", border: "none", color: "#fff",
+            fontSize: 20, cursor: "pointer", lineHeight: 1, padding: 8,
+          }}
+        >
+          ×
+        </button>
+        <div style={{ textAlign: "center" }}>
+          <img src={JABAL_LOGO_URL} alt="JABAL" style={{ height: 36, margin: "0 auto 20px", filter: "invert(1) brightness(2)" }} />
+          <div style={{ fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: "#9a9a9a", marginBottom: 12 }}>
+            Exclusive offer
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 400, letterSpacing: "-0.01em", lineHeight: 1.25 }}>
+            {offer.title}
+          </h2>
+          {offer.description && (
+            <p style={{ fontSize: 13, color: "#9a9a9a", marginTop: 12, lineHeight: 1.6 }}>
+              {offer.description}
+            </p>
+          )}
+        </div>
+
+        <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 10 }}>
+          <Link
+            to="/register"
+            onClick={close}
+            className="jb-btn"
+            style={{ width: "100%" }}
+          >
+            Sign up with email
+          </Link>
+          <Link
+            to="/register"
+            search={{ google: 1 } as never}
+            onClick={close}
+            className="jb-btn-ghost"
+            style={{ width: "100%" }}
+          >
+            Continue with Google
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
