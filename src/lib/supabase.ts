@@ -65,7 +65,7 @@ export function inferGender(item: Pick<Item, "name" | "category" | "gender">): G
   if (item.gender === "mens" || item.gender === "womens" || item.gender === "unisex") return item.gender;
   const n = (item.name || "").toLowerCase();
   if (/(women|womens|ladies|dress|skirt|cardigan|fitted top|high waist)/.test(n)) return "womens";
-  if (/(men|mens)/.test(n)) return "mens";
+  if (/(men|mens|training shorts|shorts)/.test(n)) return "mens";
   return "unisex";
 }
 

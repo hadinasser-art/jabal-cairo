@@ -120,20 +120,22 @@
 .jb-input,
 .jb-textarea,
 .jb-select {
-  border: 1px solid var(--jb-line);
+  border: 1px solid #3a3a3a;
   border-radius: 0;
-  background: #0a0a0a;
+  background: #101010;
   padding: 12px 14px;
   font-size: 14px;
   width: 100%;
   font-family: inherit;
   color: var(--jb-ink);
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
-.jb-input::placeholder, .jb-textarea::placeholder { color: #555; }
+.jb-input::placeholder, .jb-textarea::placeholder { color: #777; }
 .jb-input:focus, .jb-textarea:focus, .jb-select:focus {
   outline: none;
   border-color: #ffffff;
+  background: #141414;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .jb-label {
@@ -152,6 +154,17 @@
   letter-spacing: 0.2em;
   color: var(--jb-muted);
   font-weight: 400;
+}
+
+.jabal-bag-toast {
+  width: min(360px, calc(100vw - 32px)) !important;
+}
+.jabal-bag-toast-inner {
+  width: 100%;
+  min-width: 0;
+  max-width: 360px;
+  position: relative;
+  padding-right: 28px;
 }
 
 .jb-link {

@@ -1,11 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { supabase, formatPrice, isUuid, EGYPT_GOVERNORATES, JABAL_SUPPORT_EMAIL } from "@/lib/supabase";
-import { loadProfile, upsertProfile, markFirstOrderUsed } from "@/lib/profile";
-import { fetchActivePopupOffer, computeDiscount, type Offer } from "@/lib/offer";
+import { loadProfile, upsertProfile } from "@/lib/profile";
+import { AppliedOfferLine, OfferCountdown } from "@/components/OfferCountdown";
+import {
+  calculateOfferTotals,
+  fetchOffers,
+  findMatchingCodeOffer,
+  getFirstOrderEligible,
+  incrementOfferUses,
+  type Offer,
+} from "@/lib/offer";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Checkout — JABAL" }] }),
@@ -32,14 +41,19 @@ const empty: FormState = {
 function CartPage() {
   const { items, removeItem, updateQty, subtotal, clear } = useCart();
   const { user } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(empty);
   const [savePrefs, setSavePrefs] = useState(true);
   const [payment, setPayment] = useState<PayMethod>("cod");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [offer, setOffer] = useState<Offer | null>(null);
-  const [eligibleForDiscount, setEligibleForDiscount] = useState(false);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [firstOrderEligible, setFirstOrderEligible] = useState(true);
+  const [promoInput, setPromoInput] = useState("");
+  const [enteredCode, setEnteredCode] = useState("");
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
 
   // Prefill from profile
   useEffect(() => {
@@ -55,30 +69,73 @@ function CartPage() {
           city: p.city ?? "",
           governorate: p.governorate ?? "",
         });
-        setEligibleForDiscount(!p.first_order_discount_used);
       } else {
         setForm((f) => ({ ...f, email: user.email ?? "" }));
-        setEligibleForDiscount(true);
       }
     });
   }, [user]);
 
-  useEffect(() => { fetchActivePopupOffer().then(setOffer); }, []);
+  useEffect(() => { fetchOffers().then(setOffers); }, []);
 
-  const discount = user && eligibleForDiscount && offer?.first_order_only ? computeDiscount(offer, subtotal) : 0;
-  const shippingFee = 0;
-  const total = Math.max(0, subtotal - discount + shippingFee);
+  useEffect(() => {
+    let cancelled = false;
+    getFirstOrderEligible(user).then((eligible) => {
+      if (!cancelled) setFirstOrderEligible(eligible);
+    });
+    return () => { cancelled = true; };
+  }, [user]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const baseShippingFee = 0;
+  const offerTotals = useMemo(
+    () => calculateOfferTotals(offers, subtotal, baseShippingFee, { user, firstOrderEligible, enteredCode }, now),
+    [offers, subtotal, baseShippingFee, user, firstOrderEligible, enteredCode, now],
+  );
+  const discount = offerTotals.discountTotal;
+  const shippingFee = offerTotals.shippingFee;
+  const total = offerTotals.total;
+  const appliedOffers = offerTotals.appliedOffers;
+  const hasFreeShippingOffer = appliedOffers.some((applied) => applied.freeShipping);
+
+  const applyPromoCode = () => {
+    const code = promoInput.trim();
+    setPromoError(null);
+    if (!code) {
+      setEnteredCode("");
+      return;
+    }
+
+    const matchingOffer = findMatchingCodeOffer(offers, code, now);
+    if (!matchingOffer) {
+      setPromoError(t("cart.promo.inactive"));
+      return;
+    }
+
+    const totalsWithCode = calculateOfferTotals(offers, subtotal, baseShippingFee, { user, firstOrderEligible, enteredCode: code }, now);
+    const applied = totalsWithCode.appliedOffers.some((appliedOffer) => appliedOffer.offer.id === matchingOffer.id);
+    if (!applied) {
+      setPromoError(t("cart.promo.invalid"));
+      return;
+    }
+
+    setEnteredCode(code);
+    setPromoError(null);
+  };
 
   if (items.length === 0) {
     return (
       <Layout>
         <div className="px-6 md:px-12 py-32 text-center max-w-2xl mx-auto">
-          <div className="jb-eyebrow">Your bag</div>
+          <div className="jb-eyebrow">{t("cart.empty.eyebrow")}</div>
           <h1 style={{ fontSize: "clamp(1.75rem, 4vw, 2.5rem)", fontWeight: 300, marginTop: 12, color: "#fff" }}>
-            Your bag is empty.
+            {t("cart.empty.title")}
           </h1>
-          <p style={{ marginTop: 16, color: "#9a9a9a", fontSize: 14 }}>Find something you love.</p>
-          <div className="mt-10"><Link to="/shop" className="jb-btn">Shop the collection</Link></div>
+          <p style={{ marginTop: 16, color: "#9a9a9a", fontSize: 14 }}>{t("cart.empty.sub")}</p>
+          <div className="mt-10"><Link to="/shop" className="jb-btn">{t("cart.empty.cta")}</Link></div>
         </div>
       </Layout>
     );
@@ -89,12 +146,25 @@ function CartPage() {
     setError(null);
     const required: (keyof FormState)[] = ["first_name", "last_name", "email", "phone", "full_address", "city", "governorate"];
     for (const k of required) {
-      if (!form[k].trim()) { setError("Please fill in all fields."); return; }
+      if (!form[k].trim()) { setError(t("form.error.fields")); return; }
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setError("Please enter a valid email."); return; }
-    if (!/^[0-9+\-\s()]{7,20}$/.test(form.phone.trim())) { setError("Please enter a valid phone number."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setError(t("form.error.email")); return; }
+    if (!/^[0-9+\-\s()]{7,20}$/.test(form.phone.trim())) { setError(t("form.error.phone")); return; }
     setSubmitting(true);
     try {
+      const latestOffers = await fetchOffers();
+      const latestFirstOrderEligible = await getFirstOrderEligible(user);
+      const submittedTotals = calculateOfferTotals(
+        latestOffers,
+        subtotal,
+        baseShippingFee,
+        { user, firstOrderEligible: latestFirstOrderEligible, enteredCode },
+        Date.now(),
+      );
+      const submittedAppliedOffers = submittedTotals.appliedOffers;
+      setOffers(latestOffers);
+      setFirstOrderEligible(latestFirstOrderEligible);
+
       const { data: orderIdData, error: orderIdError } = await supabase.rpc("generate_order_id");
       if (orderIdError) throw new Error("Could not generate order ID: " + orderIdError.message);
       const orderId = orderIdData as string;
@@ -116,16 +186,16 @@ function CartPage() {
         order_summary: orderSummary,
         total_items: totalItems,
         subtotal_egp: subtotal,
-        shipping_fee_egp: shippingFee,
-        discount_egp: discount,
-        total_price_egp: total,
+        shipping_fee_egp: submittedTotals.shippingFee,
+        discount_egp: submittedTotals.discountTotal,
+        total_price_egp: submittedTotals.total,
         payment_method: payment,
         status: "pending",
         user_id: user?.id ?? null,
       };
-      if (discount > 0 && offer) {
-        combinedPayload.offer_id = offer.id;
-        combinedPayload.discount_amount_egp = discount;
+      if (submittedAppliedOffers.length > 0) {
+        combinedPayload.offer_id = submittedAppliedOffers[0].offer.id;
+        combinedPayload.discount_amount_egp = submittedTotals.discountTotal;
       }
 
       const { error: combinedError } = await supabase.from("combined_orders").insert(combinedPayload);
@@ -146,7 +216,10 @@ function CartPage() {
       const { error: insertError } = await supabase.from("orders").insert(rows);
       if (insertError) throw new Error("Could not save order items: " + insertError.message);
 
-      // Save profile + mark discount used
+      if (submittedAppliedOffers.length > 0) {
+        await incrementOfferUses(submittedAppliedOffers.map((applied) => applied.offer.id));
+      }
+
       if (user && savePrefs) {
         await upsertProfile({
           user_id: user.id,
@@ -159,7 +232,6 @@ function CartPage() {
           governorate: form.governorate.trim(),
         });
       }
-      if (user && discount > 0) await markFirstOrderUsed(user.id);
 
       try {
         sessionStorage.setItem("jabal_last_order", JSON.stringify({
@@ -169,7 +241,15 @@ function CartPage() {
             selectedSize: it.selectedSize, selectedColor: it.selectedColor,
             image_url: it.image_url,
           })),
-          subtotal, discount, total, payment_method: payment,
+          subtotal,
+          discount: submittedTotals.discountTotal,
+          discounts: submittedAppliedOffers.map((applied) => ({
+            title: applied.offer.title,
+            amount: applied.savedEgp,
+          })),
+          shipping_fee: submittedTotals.shippingFee,
+          total: submittedTotals.total,
+          payment_method: payment,
         }));
       } catch {}
 
@@ -187,36 +267,36 @@ function CartPage() {
   return (
     <Layout>
       <div className="px-6 md:px-12 py-10 max-w-6xl mx-auto w-full">
-        <div className="jb-eyebrow">Checkout</div>
+        <div className="jb-eyebrow">{t("cart.eyebrow")}</div>
         <h1 style={{ fontSize: "clamp(1.5rem, 3.5vw, 2.25rem)", fontWeight: 300, marginTop: 6, marginBottom: 32, color: "#fff" }}>
-          Your bag
+          {t("cart.title")}
         </h1>
 
         {!user && (
           <div className="mb-8" style={{ border: "1px solid #262626", padding: 16, fontSize: 13, color: "#9a9a9a" }}>
-            <Link to="/login" className="hover:underline" style={{ color: "#fff" }}>Log in</Link> for faster checkout and order history — or continue as a guest.
+            <Link to="/login" className="hover:underline" style={{ color: "#fff" }}>{t("nav.login")}</Link> {t("cart.login.note")}
           </div>
         )}
 
         <form onSubmit={submit} className="grid lg:grid-cols-[1fr_400px] gap-10">
           <div className="space-y-6">
-            <Section title="Contact">
+            <Section title={t("cart.contact")}>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="First name" v={form.first_name} on={(v) => set("first_name", v)} required />
-                <Field label="Last name" v={form.last_name} on={(v) => set("last_name", v)} required />
+                <Field label={t("form.first")} placeholder={t("form.first.placeholder")} v={form.first_name} on={(v) => set("first_name", v)} required />
+                <Field label={t("form.last")} placeholder={t("form.last.placeholder")} v={form.last_name} on={(v) => set("last_name", v)} required />
               </div>
-              <Field label="Email" type="email" v={form.email} on={(v) => set("email", v)} required />
-              <Field label="Phone number" v={form.phone} on={(v) => set("phone", v)} required />
+              <Field label={t("form.email")} placeholder={t("form.email.placeholder")} type="email" v={form.email} on={(v) => set("email", v)} required />
+              <Field label={t("form.phone")} placeholder={t("form.phone.placeholder")} v={form.phone} on={(v) => set("phone", v)} required />
             </Section>
 
-            <Section title="Shipping address">
-              <Field label="Full address" v={form.full_address} on={(v) => set("full_address", v)} required textarea />
+            <Section title={t("cart.address")}>
+              <Field label={t("form.fullAddress")} placeholder={t("form.fullAddress.placeholder")} v={form.full_address} on={(v) => set("full_address", v)} required textarea />
               <div className="grid grid-cols-2 gap-3">
-                <Field label="City" v={form.city} on={(v) => set("city", v)} required />
+                <Field label={t("form.city")} placeholder={t("form.city.placeholder")} v={form.city} on={(v) => set("city", v)} required />
                 <div>
-                  <label className="jb-label">Governorate</label>
+                  <label className="jb-label">{t("form.governorate")}</label>
                   <select className="jb-select" required value={form.governorate} onChange={(e) => set("governorate", e.target.value)}>
-                    <option value="">Select…</option>
+                    <option value="">{t("form.select")}</option>
                     {EGYPT_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
@@ -224,12 +304,12 @@ function CartPage() {
               {user && (
                 <label className="flex items-center gap-2" style={{ fontSize: 12, color: "#9a9a9a", letterSpacing: "0.1em", textTransform: "uppercase" }}>
                   <input type="checkbox" checked={savePrefs} onChange={(e) => setSavePrefs(e.target.checked)} />
-                  Save this information for next time
+                  {t("form.save")}
                 </label>
               )}
             </Section>
 
-            <Section title="Payment">
+            <Section title={t("cart.payment")}>
               <div className="space-y-2">
                 {(["cod", "instapay"] as PayMethod[]).map((pm) => {
                   const sel = payment === pm;
@@ -245,15 +325,15 @@ function CartPage() {
                         cursor: "pointer",
                       }}
                     >
-                      {pm === "cod" ? "Cash on Delivery" : "InstaPay"}
+                      {pm === "cod" ? t("pay.cod.full") : t("pay.instapay")}
                     </button>
                   );
                 })}
               </div>
               <div style={{ fontSize: 12, lineHeight: 1.6, color: "#9a9a9a", marginTop: 8 }}>
                 {payment === "instapay"
-                  ? "Send the InstaPay transfer to: 01061024345"
-                  : "You will pay when your order arrives."}
+                  ? t("pay.instapay.note")
+                  : t("pay.cod.note")}
               </div>
             </Section>
 
@@ -265,7 +345,7 @@ function CartPage() {
           </div>
 
           <aside className="self-start p-6 md:p-7" style={{ background: "#0a0a0a", border: "1px solid #262626" }}>
-            <div className="jb-eyebrow">Order summary</div>
+            <div className="jb-eyebrow">{t("cart.orderSummary")}</div>
             <div className="mt-4 space-y-4">
               {items.map((it) => (
                 <div key={`${it.id}-${it.selectedSize}-${it.selectedColor}`} className="flex gap-3">
@@ -285,7 +365,7 @@ function CartPage() {
                       />
                       <button type="button" onClick={() => removeItem(it.id, it.selectedSize, it.selectedColor)}
                         style={{ background: "transparent", border: "none", color: "#9a9a9a", cursor: "pointer", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "underline" }}>
-                        Remove
+                        {t("cart.remove")}
                       </button>
                     </div>
                   </div>
@@ -296,27 +376,72 @@ function CartPage() {
 
             <div style={{ height: 1, background: "#262626", margin: "20px 0" }} />
 
-            <Row label="Subtotal" value={formatPrice(subtotal)} />
-            <Row label="Shipping" value="Calculated later" />
-            {discount > 0 && offer && (
-              <Row label={`Discount (${offer.discount_type === "percentage" ? `${offer.discount_value}%` : "offer"})`} value={`− ${formatPrice(discount)}`} highlight />
+            <OfferCountdown offers={offers} label={t("cart.offerEnds")} onExpire={() => fetchOffers().then(setOffers)} />
+
+            <div className="mt-5">
+              <label className="jb-label">{t("cart.promo")}</label>
+              <div className="flex gap-2">
+                <input
+                  className="jb-input"
+                  value={promoInput}
+                  onChange={(e) => {
+                    setPromoInput(e.target.value);
+                    setPromoError(null);
+                  }}
+                  placeholder={t("cart.promo.placeholder")}
+                  style={{ textTransform: "uppercase" }}
+                />
+                <button type="button" className="jb-btn-ghost" onClick={applyPromoCode} style={{ minWidth: 92, padding: "12px 14px" }}>
+                  {t("cart.apply")}
+                </button>
+              </div>
+              {enteredCode && !promoError && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnteredCode("");
+                    setPromoInput("");
+                    setPromoError(null);
+                  }}
+                  className="jb-link mt-2"
+                  style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", color: "#9a9a9a" }}
+                >
+                  {t("cart.removeCode")}
+                </button>
+              )}
+              {promoError && (
+                <div style={{ marginTop: 8, fontSize: 12, color: "#fff", border: "1px solid #fff", padding: "8px 10px" }}>
+                  {promoError}
+                </div>
+              )}
+            </div>
+
+            <div style={{ height: 1, background: "#262626", margin: "20px 0" }} />
+
+            <Row label={t("cart.subtotal")} value={formatPrice(subtotal)} />
+            <Row label={t("cart.shipping")} value={hasFreeShippingOffer ? t("cart.free") : formatPrice(shippingFee)} />
+            {appliedOffers.map((applied) => (
+              <AppliedOfferLine key={applied.offer.id} title={applied.offer.title} amount={applied.savedEgp} />
+            ))}
+            {discount > 0 && (
+              <Row label={t("cart.savings")} value={`- ${formatPrice(discount)}`} highlight />
             )}
             <div style={{ height: 1, background: "#262626", margin: "12px 0" }} />
             <div className="flex justify-between" style={{ fontSize: 16, color: "#fff", paddingTop: 4 }}>
-              <span>Total</span>
+              <span>{t("cart.total")}</span>
               <span>{formatPrice(total)}</span>
             </div>
 
             <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9a9a9a", marginTop: 12 }}>
-              {payment === "instapay" ? "Cash on Delivery via InstaPay" : "Cash on Delivery"}
+              {payment === "instapay" ? `${t("pay.cod.full")} / ${t("pay.instapay")}` : t("pay.cod.full")}
             </div>
 
             <button type="submit" disabled={submitting} className="jb-btn w-full mt-6">
-              {submitting ? "Placing order…" : "Place order"}
+              {submitting ? t("form.placing") : t("form.place")}
             </button>
 
             <div style={{ fontSize: 11, color: "#9a9a9a", marginTop: 12, lineHeight: 1.5 }}>
-              Questions? <a href={`mailto:${JABAL_SUPPORT_EMAIL}`} style={{ color: "#fff" }} className="hover:underline">{JABAL_SUPPORT_EMAIL}</a>
+              {t("cart.questions")} <a href={`mailto:${JABAL_SUPPORT_EMAIL}`} style={{ color: "#fff" }} className="hover:underline">{JABAL_SUPPORT_EMAIL}</a>
             </div>
           </aside>
         </form>
@@ -327,7 +452,7 @@ function CartPage() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-3" style={{ border: "1px solid #262626", padding: 20 }}>
+    <div className="space-y-3" style={{ border: "1px solid #3a3a3a", background: "#050505", padding: 20 }}>
       <h2 style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#fff", fontWeight: 500, marginBottom: 6 }}>
         {title}
       </h2>
@@ -336,13 +461,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, v, on, type = "text", textarea, required }: { label: string; v: string; on: (v: string) => void; type?: string; textarea?: boolean; required?: boolean }) {
+function Field({ label, v, on, type = "text", textarea, required, placeholder }: { label: string; v: string; on: (v: string) => void; type?: string; textarea?: boolean; required?: boolean; placeholder?: string }) {
   return (
     <div>
       <label className="jb-label">{label}</label>
       {textarea
-        ? <textarea className="jb-textarea" rows={3} value={v} onChange={(e) => on(e.target.value)} required={required} />
-        : <input type={type} className="jb-input" value={v} onChange={(e) => on(e.target.value)} required={required} />}
+        ? <textarea className="jb-textarea" rows={3} value={v} onChange={(e) => on(e.target.value)} required={required} placeholder={placeholder} />
+        : <input type={type} className="jb-input" value={v} onChange={(e) => on(e.target.value)} required={required} placeholder={placeholder} />}
     </div>
   );
 }

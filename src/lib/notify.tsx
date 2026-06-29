@@ -11,7 +11,30 @@ export function notifyAddedToBag(opts: {
 }) {
   toast.custom(
     (id) => (
-      <div style={{ minWidth: 300, maxWidth: 360 }}>
+      <div className="jabal-bag-toast-inner">
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={() => toast.dismiss(id)}
+          style={{
+            position: "absolute",
+            top: -2,
+            right: -2,
+            width: 24,
+            height: 24,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "transparent",
+            border: 0,
+            color: "#fff",
+            fontSize: 18,
+            lineHeight: 1,
+            cursor: "pointer",
+          }}
+        >
+          ×
+        </button>
         <div
           style={{
             fontSize: 11,
@@ -59,6 +82,11 @@ export function notifyAddedToBag(opts: {
         </button>
       </div>
     ),
-    { id: TOAST_ID, duration: 5000 },
+    {
+      id: TOAST_ID,
+      duration: 5000,
+      className: "jabal-bag-toast",
+      style: { width: "min(360px, calc(100vw - 32px))" },
+    },
   );
 }

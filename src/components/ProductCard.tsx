@@ -1,35 +1,9 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useCart } from "@/lib/cart";
-import { notifyAddedToBag } from "@/lib/notify";
+import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { formatPrice, type Item } from "@/lib/supabase";
 
 export function ProductCard({ item }: { item: Item }) {
-  const { addItem } = useCart();
   const { t } = useI18n();
-  const navigate = useNavigate();
-
-  const quickAdd = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (item.sold_out || item.stock_quantity <= 0) return;
-    const size = item.size?.[0] ?? null;
-    const color = item.color?.[0] ?? null;
-    addItem({
-      id: item.id,
-      name: item.name,
-      price_egp: item.price_egp,
-      image_url: item.image_url,
-      selectedSize: size,
-      selectedColor: color,
-      quantity: 1,
-      stock_quantity: item.stock_quantity,
-    });
-    notifyAddedToBag({
-      name: item.name, size, color,
-      onView: () => navigate({ to: "/cart" }), t,
-    });
-  };
 
   const swatches = (item.color || []).slice(0, 4);
   const soldOut = item.sold_out || item.stock_quantity <= 0;
@@ -42,12 +16,8 @@ export function ProductCard({ item }: { item: Item }) {
         ) : (
           <div style={{ width: "100%", height: "100%", background: "#141414" }} />
         )}
-        {soldOut ? (
+        {soldOut && (
           <div className="pc-soldout">{t("card.soldout")}</div>
-        ) : (
-          <button type="button" className="pc-quickadd" onClick={quickAdd}>
-            {t("card.quickadd")}
-          </button>
         )}
       </div>
       <div className="mt-3">
@@ -75,8 +45,14 @@ export function ProductCard({ item }: { item: Item }) {
 
 function swatchColor(name: string): string {
   const n = name.toLowerCase();
+  if (n === "black") return "#050505";
+  if (n === "gray" || n === "grey") return "#8f8f8f";
+  if (n === "sage") return "#727a68";
+  if (n === "steel blue") return "#345c92";
+  if (n.includes("steel blue")) return "#345c92";
+  if (n.includes("sage")) return "#727a68";
   const map: Record<string, string> = {
-    black: "#111", white: "#fff", grey: "#9a9a9a", gray: "#9a9a9a",
+    black: "#050505", white: "#fff", grey: "#8f8f8f", gray: "#8f8f8f",
     beige: "#d8c9b0", cream: "#f1ead9", sand: "#cdb892",
     navy: "#1c2540", blue: "#3b5b8c", olive: "#6b6a3a",
     green: "#3d5a3f", brown: "#5a3f2c", red: "#7a2a23",

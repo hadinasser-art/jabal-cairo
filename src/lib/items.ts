@@ -29,3 +29,37 @@ export async function fetchItemsByGender(target: Gender): Promise<Item[]> {
     return g === target || g === "unisex";
   });
 }
+
+export async function fetchFeaturedItems(limit = 4): Promise<Item[]> {
+  const all = await fetchAllItems();
+  if (all.length === 0) return [];
+
+  const byId = new Map(all.map((item) => [item.id, item]));
+  const { data, error } = await supabase
+    .from("orders")
+    .select("item_id,quantity")
+    .not("item_id", "is", null)
+    .limit(1000);
+
+  if (error) {
+    console.warn("fetchFeaturedItems", error.message);
+    return all.slice(0, limit);
+  }
+
+  const soldByItem = new Map<string, number>();
+  for (const row of data || []) {
+    const itemId = row.item_id as string | null;
+    if (!itemId || !byId.has(itemId)) continue;
+    soldByItem.set(itemId, (soldByItem.get(itemId) || 0) + (Number(row.quantity) || 0));
+  }
+
+  const ranked = [...soldByItem.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([itemId]) => byId.get(itemId))
+    .filter((item): item is Item => Boolean(item));
+
+  const rankedIds = new Set(ranked.map((item) => item.id));
+  const fallback = all.filter((item) => !rankedIds.has(item.id));
+
+  return [...ranked, ...fallback].slice(0, limit);
+}

@@ -3,11 +3,13 @@ import { Link } from "@tanstack/react-router";
 import { fetchActivePopupOffer, type Offer } from "@/lib/offer";
 import { useAuth } from "@/lib/auth";
 import { JABAL_LOGO_URL } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 
 const KEY = "jabal_offer_popup_dismissed";
 
 export function OfferPopup() {
   const { user, loading } = useAuth();
+  const { t } = useI18n();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -42,10 +44,8 @@ export function OfferPopup() {
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: 16,
       }}
-      onClick={close}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%", maxWidth: 460, background: "#000",
           border: "1px solid #fff", padding: "40px 32px", position: "relative",
@@ -66,7 +66,7 @@ export function OfferPopup() {
         <div style={{ textAlign: "center" }}>
           <img src={JABAL_LOGO_URL} alt="JABAL" style={{ height: 36, margin: "0 auto 20px", filter: "invert(1) brightness(2)" }} />
           <div style={{ fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: "#9a9a9a", marginBottom: 12 }}>
-            Exclusive offer
+            {t("offer.exclusive")}
           </div>
           <h2 style={{ fontSize: 22, fontWeight: 400, letterSpacing: "-0.01em", lineHeight: 1.25 }}>
             {offer.title}
@@ -85,7 +85,7 @@ export function OfferPopup() {
             className="jb-btn"
             style={{ width: "100%" }}
           >
-            Sign up with email
+            {t("offer.emailSignup")}
           </Link>
           <Link
             to="/register"
@@ -94,7 +94,7 @@ export function OfferPopup() {
             className="jb-btn-ghost"
             style={{ width: "100%" }}
           >
-            Continue with Google
+            {t("offer.googleSignup")}
           </Link>
         </div>
       </div>
