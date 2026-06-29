@@ -32,8 +32,8 @@ function Index() {
     <Layout>
       {/* Hero */}
       <section className="px-6 md:px-12 pt-12 md:pt-20 pb-12 max-w-7xl mx-auto w-full">
-        <div className="grid md:grid-cols-2 gap-8 items-center">
-          <div>
+        <div>
+          <div style={{ maxWidth: 620 }}>
             <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)", fontWeight: 300, letterSpacing: "-0.02em", lineHeight: 1.08, color: "#fff" }}>
               {t("home.title")}
             </h1>
@@ -72,7 +72,6 @@ function Index() {
               </div>
             </div>
           </div>
-          <div style={{ background: "#0a0a0a", aspectRatio: "4/5", border: "1px solid #262626" }} />
         </div>
       </section>
 
