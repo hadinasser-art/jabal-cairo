@@ -44,44 +44,18 @@ function Index() {
               <Link to="/men" className="jb-btn">{t("nav.shopmen")}</Link>
               <Link to="/women" className="jb-btn-ghost">{t("nav.shopwomen")}</Link>
             </div>
-            <div className="mt-12">
-              <div className="flex items-end justify-between mb-5">
-                <div>
-                  <div className="jb-eyebrow">{t("home.featured.eyebrow")}</div>
-                  <h2 style={{ fontSize: "clamp(1.25rem, 2.4vw, 1.75rem)", fontWeight: 300, marginTop: 6, color: "#fff" }}>
-                    {t("home.featured.title")}
-                  </h2>
-                </div>
-                <Link to="/shop" className="jb-link hidden sm:inline-block">{t("section.viewall")}</Link>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-8">
-                {featured === null
-                  ? Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i}>
-                        <Skeleton className="aspect-[3/4] w-full" />
-                        <Skeleton className="h-3 w-2/3 mt-3" />
-                        <Skeleton className="h-3 w-1/4 mt-2" />
-                      </div>
-                    ))
-                  : featured.length === 0
-                  ? <div style={{ gridColumn: "1/-1", color: "#9a9a9a", fontSize: 13 }}>{t("section.empty")}</div>
-                  : featured.map((it) => <ProductCard key={it.id} item={it} />)}
-              </div>
-              <div className="mt-6 sm:hidden">
-                <Link to="/shop" className="jb-link">{t("section.viewall")}</Link>
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
+      <Section title={t("home.featured.eyebrow")} heading={t("home.featured.title")} to="/shop" items={featured} />
       <Section title={t("men.eyebrow")} heading={t("home.men")} to="/men" items={men} />
       <Section title={t("women.eyebrow")} heading={t("home.women")} to="/women" items={women} />
     </Layout>
   );
 }
 
-function Section({ title, heading, to, items }: { title: string; heading: string; to: "/men" | "/women"; items: Item[] | null }) {
+function Section({ title, heading, to, items }: { title: string; heading: string; to: "/shop" | "/men" | "/women"; items: Item[] | null }) {
   const { t } = useI18n();
   return (
     <section className="px-6 md:px-12 py-10 md:py-16 max-w-7xl mx-auto w-full">
