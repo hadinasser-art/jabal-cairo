@@ -16,7 +16,11 @@ export function OfferPopup() {
   useEffect(() => {
     if (loading || user) return;
     let dismissed = false;
-    try { dismissed = localStorage.getItem(KEY) === "1"; } catch {}
+    try {
+      dismissed = localStorage.getItem(KEY) === "1";
+    } catch {
+      // Ignore storage access issues in private browsing modes.
+    }
     if (dismissed) return;
     let t: ReturnType<typeof setTimeout>;
     fetchActivePopupOffer().then((o) => {
@@ -24,12 +28,18 @@ export function OfferPopup() {
       setOffer(o);
       t = setTimeout(() => setOpen(true), 2000);
     });
-    return () => { if (t) clearTimeout(t); };
+    return () => {
+      if (t) clearTimeout(t);
+    };
   }, [user, loading]);
 
   const close = () => {
     setOpen(false);
-    try { localStorage.setItem(KEY, "1"); } catch {}
+    try {
+      localStorage.setItem(KEY, "1");
+    } catch {
+      // Ignore storage access issues in private browsing modes.
+    }
   };
 
   if (!open || !offer) return null;
@@ -39,33 +49,62 @@ export function OfferPopup() {
       role="dialog"
       aria-modal="true"
       style={{
-        position: "fixed", inset: 0, zIndex: 500,
+        position: "fixed",
+        inset: 0,
+        zIndex: 500,
         background: "rgba(0,0,0,0.75)",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         padding: 16,
       }}
     >
       <div
         style={{
-          width: "100%", maxWidth: 460, background: "#000",
-          border: "1px solid #fff", padding: "40px 32px", position: "relative",
+          width: "100%",
+          maxWidth: 460,
+          background: "#000",
+          border: "1px solid #fff",
+          padding: "40px 32px",
+          position: "relative",
           color: "#fff",
+          maxHeight: "calc(100vh - 32px)",
+          overflowY: "auto",
         }}
       >
         <button
           aria-label="Close"
           onClick={close}
           style={{
-            position: "absolute", top: 12, right: 12,
-            background: "transparent", border: "none", color: "#fff",
-            fontSize: 20, cursor: "pointer", lineHeight: 1, padding: 8,
+            position: "absolute",
+            top: 12,
+            right: 12,
+            background: "transparent",
+            border: "none",
+            color: "#fff",
+            fontSize: 20,
+            cursor: "pointer",
+            lineHeight: 1,
+            padding: 8,
           }}
         >
           ×
         </button>
         <div style={{ textAlign: "center" }}>
-          <img src={JABAL_LOGO_URL} alt="JABAL" style={{ height: 36, margin: "0 auto 20px", filter: "invert(1) brightness(2)" }} />
-          <div style={{ fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: "#9a9a9a", marginBottom: 12 }}>
+          <img
+            src={JABAL_LOGO_URL}
+            alt="JABAL"
+            style={{ height: 36, margin: "0 auto 20px", filter: "invert(1) brightness(2)" }}
+          />
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.25em",
+              textTransform: "uppercase",
+              color: "#9a9a9a",
+              marginBottom: 12,
+            }}
+          >
             {t("offer.exclusive")}
           </div>
           <h2 style={{ fontSize: 22, fontWeight: 400, letterSpacing: "-0.01em", lineHeight: 1.25 }}>
@@ -79,12 +118,7 @@ export function OfferPopup() {
         </div>
 
         <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 10 }}>
-          <Link
-            to="/register"
-            onClick={close}
-            className="jb-btn"
-            style={{ width: "100%" }}
-          >
+          <Link to="/register" onClick={close} className="jb-btn" style={{ width: "100%" }}>
             {t("offer.emailSignup")}
           </Link>
           <Link

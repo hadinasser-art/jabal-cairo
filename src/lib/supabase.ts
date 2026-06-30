@@ -72,8 +72,7 @@ export type Order = {
   user_id?: string | null;
 };
 
-export const formatPrice = (p: number) =>
-  "EGP " + Math.round(p).toLocaleString("en-EG");
+export const formatPrice = (p: number) => "EGP " + Math.round(p).toLocaleString("en-EG");
 
 export const SIZE_ORDER = ["S", "M", "L", "XL", "XXL"] as const;
 
@@ -87,14 +86,13 @@ export function sortSizes(sizes: string[]) {
   return [...sizes].sort((a, b) => sizeSortValue(a) - sizeSortValue(b) || a.localeCompare(b));
 }
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export const isUuid = (s: string | null | undefined): s is string =>
-  !!s && UUID_RE.test(s);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const isUuid = (s: string | null | undefined): s is string => !!s && UUID_RE.test(s);
 
 // Heuristic until gender column populated
 export function inferGender(item: Pick<Item, "name" | "category" | "gender">): Gender {
-  if (item.gender === "mens" || item.gender === "womens" || item.gender === "unisex") return item.gender;
+  if (item.gender === "mens" || item.gender === "womens" || item.gender === "unisex")
+    return item.gender;
   const n = (item.name || "").toLowerCase();
   if (/(women|womens|ladies|dress|skirt|cardigan|fitted top|high waist)/.test(n)) return "womens";
   if (/(men|mens|training shorts|shorts)/.test(n)) return "mens";
@@ -102,8 +100,65 @@ export function inferGender(item: Pick<Item, "name" | "category" | "gender">): G
 }
 
 export const EGYPT_GOVERNORATES = [
-  "Cairo", "Giza", "Alexandria", "Qalyubia", "Sharqia", "Dakahlia", "Beheira",
-  "Kafr El Sheikh", "Gharbia", "Monufia", "Damietta", "Port Said", "Ismailia",
-  "Suez", "North Sinai", "South Sinai", "Faiyum", "Beni Suef", "Minya", "Asyut",
-  "Sohag", "Qena", "Luxor", "Aswan", "Red Sea", "New Valley", "Matrouh",
+  "Cairo",
+  "Giza",
+  "Alexandria",
+  "Qalyubia",
+  "Sharqia",
+  "Dakahlia",
+  "Beheira",
+  "Kafr El Sheikh",
+  "Gharbia",
+  "Monufia",
+  "Damietta",
+  "Port Said",
+  "Ismailia",
+  "Suez",
+  "North Sinai",
+  "South Sinai",
+  "Faiyum",
+  "Beni Suef",
+  "Minya",
+  "Asyut",
+  "Sohag",
+  "Qena",
+  "Luxor",
+  "Aswan",
+  "Red Sea",
+  "New Valley",
+  "Matrouh",
 ];
+
+export const EGYPT_GOVERNORATE_AR: Record<string, string> = {
+  Cairo: "القاهرة",
+  Giza: "الجيزة",
+  Alexandria: "الإسكندرية",
+  Qalyubia: "القليوبية",
+  Sharqia: "الشرقية",
+  Dakahlia: "الدقهلية",
+  Beheira: "البحيرة",
+  "Kafr El Sheikh": "كفر الشيخ",
+  Gharbia: "الغربية",
+  Monufia: "المنوفية",
+  Damietta: "دمياط",
+  "Port Said": "بورسعيد",
+  Ismailia: "الإسماعيلية",
+  Suez: "السويس",
+  "North Sinai": "شمال سيناء",
+  "South Sinai": "جنوب سيناء",
+  Faiyum: "الفيوم",
+  "Beni Suef": "بني سويف",
+  Minya: "المنيا",
+  Asyut: "أسيوط",
+  Sohag: "سوهاج",
+  Qena: "قنا",
+  Luxor: "الأقصر",
+  Aswan: "أسوان",
+  "Red Sea": "البحر الأحمر",
+  "New Valley": "الوادي الجديد",
+  Matrouh: "مطروح",
+};
+
+export function governorateLabel(governorate: string, lang: "en" | "ar") {
+  return lang === "ar" ? (EGYPT_GOVERNORATE_AR[governorate] ?? governorate) : governorate;
+}

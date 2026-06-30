@@ -15,34 +15,46 @@ type Props = {
   showLabel?: boolean;
 };
 
-export function FavoriteButton({ itemId, itemName, variantId = null, requireVariant = false, className, showLabel = false }: Props) {
+export function FavoriteButton({
+  itemId,
+  itemName,
+  variantId = null,
+  requireVariant = false,
+  className,
+  showLabel = false,
+}: Props) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
   const [favoriteId, setFavoriteId] = useState<string | null>(null);
+  const [savedVariantId, setSavedVariantId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
     setFavoriteId(null);
-    if (loading || !user) return () => { alive = false; };
+    setSavedVariantId(null);
+    if (loading || !user)
+      return () => {
+        alive = false;
+      };
 
-    const query = supabase
+    supabase
       .from("favorites")
-      .select("id")
+      .select("id,variant_id")
       .eq("user_id", user.id)
-      .eq("item_id", itemId);
-
-    const scopedQuery = variantId ? query.eq("variant_id", variantId) : query.is("variant_id", null);
-    scopedQuery
+      .eq("item_id", itemId)
       .maybeSingle()
       .then(({ data, error }) => {
         if (!alive) return;
         if (error) console.warn("favorite status", error.message);
         setFavoriteId(data?.id ?? null);
+        setSavedVariantId(data?.variant_id ?? null);
       });
 
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [itemId, loading, user, variantId]);
 
   const toggle = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -61,29 +73,52 @@ export function FavoriteButton({ itemId, itemName, variantId = null, requireVari
     }
 
     setBusy(true);
-    if (favoriteId) {
-      const { error } = await supabase.from("favorites").delete().eq("id", favoriteId).eq("user_id", user.id);
+    const sameSavedVariant = favoriteId && savedVariantId === variantId;
+    const productLevelToggle = favoriteId && variantId === null && !requireVariant;
+
+    if (sameSavedVariant || productLevelToggle) {
+      const { error } = await supabase
+        .from("favorites")
+        .delete()
+        .eq("id", favoriteId)
+        .eq("user_id", user.id);
       if (error) toast.error(error.message);
       else {
         setFavoriteId(null);
+        setSavedVariantId(null);
         toast(t("favorite.removed"));
+      }
+    } else if (favoriteId) {
+      const { data, error } = await supabase
+        .from("favorites")
+        .update({ variant_id: variantId })
+        .eq("id", favoriteId)
+        .eq("user_id", user.id)
+        .select("id,variant_id")
+        .single();
+      if (error) toast.error(error.message);
+      else {
+        setFavoriteId(data.id);
+        setSavedVariantId(data.variant_id ?? null);
+        toast(`${itemName} ${t("favorite.updated")}`);
       }
     } else {
       const { data, error } = await supabase
         .from("favorites")
         .insert({ user_id: user.id, item_id: itemId, variant_id: variantId })
-        .select("id")
+        .select("id,variant_id")
         .single();
       if (error) toast.error(error.message);
       else {
         setFavoriteId(data.id);
+        setSavedVariantId(data.variant_id ?? null);
         toast(`${itemName} ${t("favorite.added")}`);
       }
     }
     setBusy(false);
   };
 
-  const saved = Boolean(favoriteId);
+  const saved = Boolean(favoriteId && (variantId === null || savedVariantId === variantId));
   const label = saved ? t("favorite.saved") : t("favorite.save");
 
   return (
@@ -112,7 +147,12 @@ export function FavoriteButton({ itemId, itemName, variantId = null, requireVari
         fontSize: 11,
       }}
     >
-      <Heart size={17} strokeWidth={1.8} fill={saved ? "currentColor" : "none"} aria-hidden="true" />
+      <Heart
+        size={17}
+        strokeWidth={1.8}
+        fill={saved ? "currentColor" : "none"}
+        aria-hidden="true"
+      />
       {showLabel && <span>{label}</span>}
     </button>
   );

@@ -18,8 +18,8 @@ function parts(ms: number) {
   return { days, hours, minutes, seconds };
 }
 
-export function OfferCountdown({ offers, label = "Offer ends in", onExpire }: Props) {
-  const { lang } = useI18n();
+export function OfferCountdown({ offers, label, onExpire }: Props) {
+  const { lang, t } = useI18n();
   const [now, setNow] = useState(Date.now());
   const endsAt = getSoonestCountdownEnd(offers, now);
 
@@ -52,14 +52,27 @@ export function OfferCountdown({ offers, label = "Offer ends in", onExpire }: Pr
         color: "#fff",
       }}
     >
-      <div className="jb-eyebrow" style={{ color: "#fff" }}>{label}</div>
+      <div className="jb-eyebrow" style={{ color: "#fff" }}>
+        {label ?? t("cart.offerEnds")}
+      </div>
       <div className="grid grid-cols-4 gap-2 mt-3">
         {cells.map(([unit, value]) => (
-          <div key={unit} style={{ border: "1px solid #262626", padding: "10px 6px", textAlign: "center" }}>
+          <div
+            key={unit}
+            style={{ border: "1px solid #262626", padding: "10px 6px", textAlign: "center" }}
+          >
             <div style={{ fontSize: 18, color: "#fff", fontVariantNumeric: "tabular-nums" }}>
               {String(value).padStart(2, "0")}
             </div>
-            <div style={{ marginTop: 4, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9a9a9a" }}>
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 10,
+                letterSpacing: lang === "ar" ? 0 : "0.12em",
+                textTransform: "uppercase",
+                color: "#9a9a9a",
+              }}
+            >
               {unit}
             </div>
           </div>
@@ -71,8 +84,11 @@ export function OfferCountdown({ offers, label = "Offer ends in", onExpire }: Pr
 
 export function AppliedOfferLine({ title, amount }: { title: string; amount: number }) {
   return (
-    <div className="flex justify-between" style={{ fontSize: 13, color: "#fff", padding: "4px 0", gap: 16 }}>
-      <span>{title}</span>
+    <div
+      className="flex justify-between"
+      style={{ fontSize: 13, color: "#fff", padding: "4px 0", gap: 16 }}
+    >
+      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{title}</span>
       <span style={{ color: "#fff", whiteSpace: "nowrap" }}>- {formatPrice(amount)}</span>
     </div>
   );

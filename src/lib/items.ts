@@ -7,7 +7,9 @@ export async function fetchAllItems(): Promise<Item[]> {
   // Try with gender; fall back to * if column missing
   let { data, error } = await supabase
     .from("items")
-    .select("id,name,description,price_egp,image_url,category,size,color,stock_quantity,sold_out,created_at,gender")
+    .select(
+      "id,name,description,price_egp,image_url,category,size,color,stock_quantity,sold_out,created_at,gender",
+    )
     .order("created_at", { ascending: false });
   if (error && /gender/i.test(error.message)) {
     const r = await supabase.from("items").select("*").order("created_at", { ascending: false });

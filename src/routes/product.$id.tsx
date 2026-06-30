@@ -1,7 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Layout, Skeleton, ErrorBanner } from "@/components/Layout";
-import { supabase, type Item, type ProductVariant, formatPrice, sortSizes, sizeSortValue } from "@/lib/supabase";
+import {
+  supabase,
+  type Item,
+  type ProductVariant,
+  formatPrice,
+  sortSizes,
+  sizeSortValue,
+} from "@/lib/supabase";
 import { useCart } from "@/lib/cart";
 import { notifyAddedToBag } from "@/lib/notify";
 import { useI18n } from "@/lib/i18n";
@@ -16,10 +23,12 @@ const SHORTS_SIZE_CHART_URL =
 const WIDE_LEG_SIZE_CHART_URL =
   "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/women/wide%20leg/wide%20leg%20women%20chart.jpg";
 const SHORTS_COLOR_IMAGES: Record<string, string> = {
-  Black: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/black.jpg",
+  Black:
+    "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/black.jpg",
   Gray: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/gray.jpg",
   Sage: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/sage.jpg",
-  "Steel Blue": "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/Steel%20Blue.jpg",
+  "Steel Blue":
+    "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/Steel%20Blue.jpg",
 };
 
 export const Route = createFileRoute("/product/$id")({
@@ -59,104 +68,194 @@ function ProductPage() {
   const [warning, setWarning] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
 
-  useEffect(() => { fetchOffers().then(setOffers); }, []);
+  useEffect(() => {
+    fetchOffers().then(setOffers);
+  }, []);
 
   useEffect(() => {
-    setItem(null); setErr(null);
+    setItem(null);
+    setErr(null);
     setVariants([]);
-    supabase.from("items").select("*").eq("id", id).maybeSingle().then(({ data, error }) => {
-      if (error) setErr(error.message);
-      else {
-        const it = data as Item | null;
-        setItem(it);
-        if (it) {
-          setSize(it.size && it.size.length === 1 ? it.size[0] : null);
-          setColor(it.id === SHORTS_PRODUCT_ID ? (it.color?.[0] ?? null) : (it.color && it.color.length === 1 ? it.color[0] : null));
-          supabase
-            .from("product_variants")
-            .select("*")
-            .eq("item_id", it.id)
-            .order("color", { ascending: true })
-            .order("size", { ascending: true })
-            .then(({ data: variantRows, error: variantError }) => {
-              if (variantError && !/product_variants/i.test(variantError.message)) console.warn("product_variants", variantError.message);
-              const rows = ((variantRows as ProductVariant[]) || []).sort((a, b) =>
-                a.color.localeCompare(b.color) || sizeSortValue(a.size) - sizeSortValue(b.size) || a.size.localeCompare(b.size)
-              );
-              setVariants(rows);
-              if (rows.length > 0) {
-                const firstAvailable = rows.find((variant) => variant.stock_quantity > 0) || rows[0];
-                setColor((current) => current ?? firstAvailable.color);
-              }
-            });
-          if (it.category) {
-            supabase.from("items").select("*").eq("category", it.category).neq("id", it.id).limit(4)
-              .then(({ data: rel }) => setRelated((rel as Item[]) || []));
+    supabase
+      .from("items")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) setErr(error.message);
+        else {
+          const it = data as Item | null;
+          setItem(it);
+          if (it) {
+            setSize(it.size && it.size.length === 1 ? it.size[0] : null);
+            setColor(
+              it.id === SHORTS_PRODUCT_ID
+                ? (it.color?.[0] ?? null)
+                : it.color && it.color.length === 1
+                  ? it.color[0]
+                  : null,
+            );
+            supabase
+              .from("product_variants")
+              .select("*")
+              .eq("item_id", it.id)
+              .order("color", { ascending: true })
+              .order("size", { ascending: true })
+              .then(({ data: variantRows, error: variantError }) => {
+                if (variantError && !/product_variants/i.test(variantError.message))
+                  console.warn("product_variants", variantError.message);
+                const rows = ((variantRows as ProductVariant[]) || []).sort(
+                  (a, b) =>
+                    a.color.localeCompare(b.color) ||
+                    sizeSortValue(a.size) - sizeSortValue(b.size) ||
+                    a.size.localeCompare(b.size),
+                );
+                setVariants(rows);
+                if (rows.length > 0) {
+                  const firstAvailable =
+                    rows.find((variant) => variant.stock_quantity > 0) || rows[0];
+                  setColor((current) => current ?? firstAvailable.color);
+                }
+              });
+            if (it.category) {
+              supabase
+                .from("items")
+                .select("*")
+                .eq("category", it.category)
+                .neq("id", it.id)
+                .limit(4)
+                .then(({ data: rel }) => setRelated((rel as Item[]) || []));
+            }
           }
         }
-      }
-    });
+      });
   }, [id]);
 
-  if (err) return <Layout><div className="p-6"><ErrorBanner /></div></Layout>;
-  if (!item) return (
-    <Layout>
-      <div className="grid md:grid-cols-2 gap-8 p-6 md:p-12 max-w-7xl mx-auto">
-        <Skeleton className="aspect-[3/4] w-full" />
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-3/4" /><Skeleton className="h-6 w-1/3" /><Skeleton className="h-24 w-full" />
+  if (err)
+    return (
+      <Layout>
+        <div className="p-6">
+          <ErrorBanner />
         </div>
-      </div>
-    </Layout>
-  );
+      </Layout>
+    );
+  if (!item)
+    return (
+      <Layout>
+        <div className="grid lg:grid-cols-2 gap-8 p-6 md:p-12 max-w-7xl mx-auto">
+          <Skeleton className="aspect-[3/4] w-full" />
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        </div>
+      </Layout>
+    );
 
   const hasVariants = variants.length > 0;
-  const colorOptions = hasVariants ? Array.from(new Set(variants.map((variant) => variant.color))) : (item.color || []);
+  const colorOptions = hasVariants
+    ? Array.from(new Set(variants.map((variant) => variant.color)))
+    : item.color || [];
   const sizeOptions = hasVariants
-    ? sortSizes(Array.from(new Set(variants.filter((variant) => !color || variant.color === color).map((variant) => variant.size))))
+    ? sortSizes(
+        Array.from(
+          new Set(
+            variants
+              .filter((variant) => !color || variant.color === color)
+              .map((variant) => variant.size),
+          ),
+        ),
+      )
     : sortSizes(item.size || []);
   const variantFor = (variantColor: string | null, variantSize: string | null) =>
-    variants.find((variant) => variant.color === variantColor && variant.size === variantSize) || null;
+    variants.find((variant) => variant.color === variantColor && variant.size === variantSize) ||
+    null;
   const selectedVariant = hasVariants ? variantFor(color, size) : null;
   const selectedStock = hasVariants ? (selectedVariant?.stock_quantity ?? 0) : item.stock_quantity;
   const totalVariantStock = variants.reduce((sum, variant) => sum + variant.stock_quantity, 0);
   const soldOut = hasVariants ? totalVariantStock <= 0 : item.sold_out || item.stock_quantity <= 0;
-  const selectedChoiceSoldOut = hasVariants && Boolean(color && size && (!selectedVariant || selectedStock <= 0));
+  const selectedChoiceSoldOut =
+    hasVariants && Boolean(color && size && (!selectedVariant || selectedStock <= 0));
   const selectedSoldOutText = selectedChoiceSoldOut
     ? `${[color, size].filter(Boolean).join(" / ")} ${t("card.soldout")}`
     : null;
-  const selectedColorImage = color ? variants.find((variant) => variant.color === color && variant.image_url)?.image_url ?? null : null;
-  const selectedImage = selectedVariant?.image_url || selectedColorImage || getVariantImage(item, color);
-  const imageVariantProduct = hasImageVariants(item) || variants.some((variant) => Boolean(variant.image_url));
+  const selectedColorImage = color
+    ? (variants.find((variant) => variant.color === color && variant.image_url)?.image_url ?? null)
+    : null;
+  const selectedImage =
+    selectedVariant?.image_url || selectedColorImage || getVariantImage(item, color);
+  const imageVariantProduct =
+    hasImageVariants(item) || variants.some((variant) => Boolean(variant.image_url));
   const sizeChartUrl = getSizeChartUrl(item);
   const maxQty = Math.max(1, selectedStock);
 
   const handleAdd = () => {
     setWarning(null);
-    if (sizeOptions.length > 0 && !size) { setWarning(t("pdp.selectsize")); return; }
-    if (colorOptions.length > 0 && !color) { setWarning(t("pdp.selectcolor")); return; }
-    if (hasVariants && (!selectedVariant || selectedVariant.stock_quantity <= 0)) { setWarning(t("card.soldout")); return; }
+    if (sizeOptions.length > 0 && !size) {
+      setWarning(t("pdp.selectsize"));
+      return;
+    }
+    if (colorOptions.length > 0 && !color) {
+      setWarning(t("pdp.selectcolor"));
+      return;
+    }
+    if (hasVariants && (!selectedVariant || selectedVariant.stock_quantity <= 0)) {
+      setWarning(t("card.soldout"));
+      return;
+    }
     addItem({
-      id: item.id, variantId: selectedVariant?.id ?? null, name: item.name, price_egp: item.price_egp, image_url: selectedImage,
-      selectedSize: size, selectedColor: color, quantity: Math.min(qty, selectedStock), stock_quantity: selectedStock,
+      id: item.id,
+      variantId: selectedVariant?.id ?? null,
+      name: item.name,
+      price_egp: item.price_egp,
+      image_url: selectedImage,
+      selectedSize: size,
+      selectedColor: color,
+      quantity: Math.min(qty, selectedStock),
+      stock_quantity: selectedStock,
     });
     notifyAddedToBag({ name: item.name, size, color, onView: () => navigate({ to: "/cart" }), t });
   };
 
   return (
     <Layout>
-      <div className="px-6 md:px-12 pt-6 max-w-[1600px] mx-auto" style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9a9a9a" }}>
-        <Link to="/" style={{ color: "#9a9a9a" }}>JABAL</Link>
+      <div
+        className="px-6 md:px-12 pt-6 max-w-[1600px] mx-auto"
+        style={{
+          fontSize: 11,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: "#9a9a9a",
+        }}
+      >
+        <Link to="/" style={{ color: "#9a9a9a" }}>
+          JABAL
+        </Link>
         <span style={{ margin: "0 8px" }}>/</span>
-        <Link to="/shop" style={{ color: "#9a9a9a" }}>{t("nav.shop")}</Link>
-        {item.category && (<><span style={{ margin: "0 8px" }}>/</span><span>{item.category}</span></>)}
+        <Link to="/shop" style={{ color: "#9a9a9a" }}>
+          {t("nav.shop")}
+        </Link>
+        {item.category && (
+          <>
+            <span style={{ margin: "0 8px" }}>/</span>
+            <span>{item.category}</span>
+          </>
+        )}
       </div>
 
-      <div className="grid md:grid-cols-[60%_40%] gap-0 max-w-[1600px] mx-auto mt-6">
+      <div className="grid lg:grid-cols-[60%_40%] gap-0 max-w-[1600px] mx-auto mt-6">
         <div style={{ background: "#141414" }} className="relative">
           {selectedImage ? (
-            <img key={selectedImage} src={selectedImage} alt={[item.name, color].filter(Boolean).join(" - ")} className="w-full h-full object-cover aspect-[3/4] md:aspect-auto md:min-h-[80vh]" />
-          ) : (<div className="aspect-[3/4]" style={{ background: "#141414" }} />)}
+            <img
+              key={selectedImage}
+              src={selectedImage}
+              alt={[item.name, color].filter(Boolean).join(" - ")}
+              className="w-full h-full object-cover aspect-[3/4] lg:aspect-auto lg:min-h-[80vh]"
+            />
+          ) : (
+            <div className="aspect-[3/4]" style={{ background: "#141414" }} />
+          )}
           {(soldOut || selectedChoiceSoldOut) && (
             <div className="pc-soldout" style={{ fontSize: 13, textAlign: "center", padding: 18 }}>
               {selectedSoldOutText || t("card.soldout")}
@@ -166,8 +265,22 @@ function ProductPage() {
 
         <div className="p-6 md:p-12 flex flex-col">
           {item.category && <div className="jb-eyebrow">{item.category}</div>}
-          <h1 style={{ marginTop: 8, fontSize: "clamp(1.5rem, 2.5vw, 2rem)", fontWeight: 300, letterSpacing: "-0.01em", lineHeight: 1.15, color: "#fff" }}>{item.name}</h1>
-          <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginTop: 12 }}>
+          <h1
+            style={{
+              marginTop: 8,
+              fontSize: "clamp(1.5rem, 2.5vw, 2rem)",
+              fontWeight: 300,
+              letterSpacing: "-0.01em",
+              lineHeight: 1.15,
+              color: "#fff",
+            }}
+          >
+            {item.name}
+          </h1>
+          <div
+            className="flex items-center justify-between gap-4 flex-wrap"
+            style={{ marginTop: 12 }}
+          >
             <div style={{ fontSize: 16, color: "#fff" }}>{formatPrice(item.price_egp)}</div>
             <FavoriteButton
               itemId={item.id}
@@ -179,18 +292,37 @@ function ProductPage() {
           <div className="mt-5">
             <OfferCountdown offers={offers} onExpire={() => fetchOffers().then(setOffers)} />
           </div>
-          {item.description && <p style={{ marginTop: 20, fontSize: 14, lineHeight: 1.7, color: "#9a9a9a" }}>{item.description}</p>}
+          {item.description && (
+            <p style={{ marginTop: 20, fontSize: 14, lineHeight: 1.7, color: "#9a9a9a" }}>
+              {item.description}
+            </p>
+          )}
 
           <div style={{ height: 1, background: "#262626", margin: "32px 0" }} />
 
           {!soldOut && colorOptions.length > 0 && (
             <div className="mb-6">
-              <div className="jb-label">{t("pdp.color")}{color ? ` — ${color}` : ""}</div>
-              <div className={imageVariantProduct ? "flex flex-wrap gap-2 max-w-[320px]" : "flex flex-wrap gap-2"}>
+              <div className="jb-label">
+                {t("pdp.color")}
+                {color ? ` — ${color}` : ""}
+              </div>
+              <div
+                className={
+                  imageVariantProduct
+                    ? "flex flex-wrap gap-2 max-w-full sm:max-w-[360px]"
+                    : "flex flex-wrap gap-2"
+                }
+              >
                 {colorOptions.map((c) => {
                   const sel = c === color;
-                  const variantImage = variants.find((variant) => variant.color === c && variant.image_url)?.image_url || getVariantImage(item, c);
-                  const colorStock = hasVariants ? variants.filter((variant) => variant.color === c).reduce((sum, variant) => sum + variant.stock_quantity, 0) : item.stock_quantity;
+                  const variantImage =
+                    variants.find((variant) => variant.color === c && variant.image_url)
+                      ?.image_url || getVariantImage(item, c);
+                  const colorStock = hasVariants
+                    ? variants
+                        .filter((variant) => variant.color === c)
+                        .reduce((sum, variant) => sum + variant.stock_quantity, 0)
+                    : item.stock_quantity;
                   const colorSoldOut = colorStock <= 0;
                   if (imageVariantProduct) {
                     return (
@@ -198,7 +330,9 @@ function ProductPage() {
                         key={c}
                         type="button"
                         onClick={() => {
-                          setColor(c); setSize(null); setQty(1);
+                          setColor(c);
+                          setSize(null);
+                          setQty(1);
                           setWarning(colorSoldOut ? `${c} ${t("card.soldout")}` : null);
                         }}
                         style={{
@@ -212,46 +346,97 @@ function ProductPage() {
                           width: 72,
                         }}
                       >
-                        <div style={{ aspectRatio: "1 / 1", background: "#141414", overflow: "hidden", position: "relative" }}>
+                        <div
+                          style={{
+                            aspectRatio: "1 / 1",
+                            background: "#141414",
+                            overflow: "hidden",
+                            position: "relative",
+                          }}
+                        >
                           {variantImage && (
-                            <img src={variantImage} alt={`${item.name} ${c}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            <img
+                              src={variantImage}
+                              alt={`${item.name} ${c}`}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: "block",
+                              }}
+                            />
                           )}
                           {colorSoldOut && (
-                            <div style={{
-                              position: "absolute",
-                              inset: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              background: "rgba(0,0,0,0.58)",
-                              color: "#fff",
-                              fontSize: 8,
-                              letterSpacing: "0.12em",
-                              textTransform: "uppercase",
-                              textAlign: "center",
-                              padding: 6,
-                            }}>
+                            <div
+                              style={{
+                                position: "absolute",
+                                inset: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: "rgba(0,0,0,0.58)",
+                                color: "#fff",
+                                fontSize: 8,
+                                letterSpacing: "0.12em",
+                                textTransform: "uppercase",
+                                textAlign: "center",
+                                padding: 6,
+                              }}
+                            >
                               {t("card.soldout")}
                             </div>
                           )}
                         </div>
-                        <div style={{ padding: "7px 6px", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: sel ? "#fff" : "#9a9a9a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div
+                          style={{
+                            padding: "7px 6px",
+                            fontSize: 9,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                            color: sel ? "#fff" : "#9a9a9a",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
                           {c}
                         </div>
                       </button>
                     );
                   }
                   return (
-                    <button key={c} onClick={() => {
-                      setColor(c); setSize(null); setQty(1);
-                      setWarning(colorSoldOut ? `${c} ${t("card.soldout")}` : null);
-                    }} style={{
-                      minHeight: 46, padding: "0 14px", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase",
-                      border: sel ? "1px solid #fff" : "1px solid #262626", background: "transparent", color: "#fff", cursor: "pointer", opacity: colorSoldOut && !sel ? 0.68 : 1,
-                      display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
-                    }}>
-                      <span>{c}</span>
-                      {colorSoldOut && <span style={{ fontSize: 8, letterSpacing: "0.08em", color: "#9a9a9a" }}>{t("card.soldout")}</span>}
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setColor(c);
+                        setSize(null);
+                        setQty(1);
+                        setWarning(colorSoldOut ? `${c} ${t("card.soldout")}` : null);
+                      }}
+                      style={{
+                        minHeight: 46,
+                        padding: "0 14px",
+                        fontSize: 12,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        border: sel ? "1px solid #fff" : "1px solid #262626",
+                        background: "transparent",
+                        color: "#fff",
+                        cursor: "pointer",
+                        opacity: colorSoldOut && !sel ? 0.68 : 1,
+                        display: "inline-flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 2,
+                      }}
+                    >
+                      <span style={{ overflowWrap: "anywhere" }}>{c}</span>
+                      {colorSoldOut && (
+                        <span style={{ fontSize: 8, letterSpacing: "0.08em", color: "#9a9a9a" }}>
+                          {t("card.soldout")}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -289,16 +474,25 @@ function ProductPage() {
               <div className="flex flex-wrap gap-2">
                 {sizeOptions.map((s) => {
                   const sel = s === size;
-                  const stockForSize = hasVariants ? (variantFor(color, s)?.stock_quantity ?? 0) : item.stock_quantity;
+                  const stockForSize = hasVariants
+                    ? (variantFor(color, s)?.stock_quantity ?? 0)
+                    : item.stock_quantity;
                   const sizeSoldOut = stockForSize <= 0;
                   return (
                     <button
                       key={s}
                       onClick={() => {
-                        setSize(s); setQty(1);
-                        setWarning(sizeSoldOut ? `${[color, s].filter(Boolean).join(" / ")} ${t("card.soldout")}` : null);
+                        setSize(s);
+                        setQty(1);
+                        setWarning(
+                          sizeSoldOut
+                            ? `${[color, s].filter(Boolean).join(" / ")} ${t("card.soldout")}`
+                            : null,
+                        );
                       }}
-                      title={sizeSoldOut ? t("card.soldout") : `${stockForSize} ${t("pdp.instock")}`}
+                      title={
+                        sizeSoldOut ? t("card.soldout") : `${stockForSize} ${t("pdp.instock")}`
+                      }
                       style={{
                         minWidth: 64,
                         minHeight: 58,
@@ -320,7 +514,13 @@ function ProductPage() {
                     >
                       <span>{s}</span>
                       {sizeSoldOut && (
-                        <span style={{ fontSize: 8, letterSpacing: "0.08em", color: sel ? "#fff" : "#9a9a9a" }}>
+                        <span
+                          style={{
+                            fontSize: 8,
+                            letterSpacing: "0.08em",
+                            color: sel ? "#fff" : "#9a9a9a",
+                          }}
+                        >
                           {t("card.soldout")}
                         </span>
                       )}
@@ -334,21 +534,58 @@ function ProductPage() {
           {!soldOut && (
             <div className="mb-6">
               <div className="jb-label">{t("pdp.qty")}</div>
-              <input type="number" min={1} max={maxQty} value={qty}
+              <input
+                type="number"
+                min={1}
+                max={maxQty}
+                value={qty}
                 onChange={(e) => setQty(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))}
-                className="jb-input" style={{ maxWidth: 120 }} disabled={(hasVariants && !selectedVariant) || selectedChoiceSoldOut} />
-              <div className="mt-2" style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "#9a9a9a" }}>
-                {selectedChoiceSoldOut ? (selectedSoldOutText || t("card.soldout")) : hasVariants && !selectedVariant ? t("pdp.selectsize") : `${selectedStock} ${t("pdp.instock")}`}
+                className="jb-input"
+                style={{ maxWidth: 120 }}
+                disabled={(hasVariants && !selectedVariant) || selectedChoiceSoldOut}
+              />
+              <div
+                className="mt-2"
+                style={{
+                  fontSize: 11,
+                  letterSpacing: "0.15em",
+                  textTransform: "uppercase",
+                  color: "#9a9a9a",
+                }}
+              >
+                {selectedChoiceSoldOut
+                  ? selectedSoldOutText || t("card.soldout")
+                  : hasVariants && !selectedVariant
+                    ? t("pdp.selectsize")
+                    : `${selectedStock} ${t("pdp.instock")}`}
               </div>
             </div>
           )}
 
-          {warning && <div className="mb-4" style={{ border: "1px solid #fff", padding: "10px 14px", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff" }}>{warning}</div>}
+          {warning && (
+            <div
+              className="mb-4"
+              style={{
+                border: "1px solid #fff",
+                padding: "10px 14px",
+                fontSize: 12,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "#fff",
+              }}
+            >
+              {warning}
+            </div>
+          )}
 
           {soldOut || selectedChoiceSoldOut ? (
-            <button className="jb-btn w-full mt-4" disabled>{t("card.soldout")}</button>
+            <button className="jb-btn w-full mt-4" disabled>
+              {t("card.soldout")}
+            </button>
           ) : (
-            <button className="jb-btn w-full mt-4" onClick={handleAdd}>{t("pdp.addbag")}</button>
+            <button className="jb-btn w-full mt-4" onClick={handleAdd}>
+              {t("pdp.addbag")}
+            </button>
           )}
         </div>
       </div>
@@ -357,7 +594,9 @@ function ProductPage() {
         <section className="px-6 md:px-12 py-20 max-w-7xl mx-auto w-full">
           <div className="jb-eyebrow mb-6">{t("pdp.related")}</div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
-            {related.map((r) => <ProductCard key={r.id} item={r} />)}
+            {related.map((r) => (
+              <ProductCard key={r.id} item={r} />
+            ))}
           </div>
         </section>
       )}

@@ -20,7 +20,7 @@ const DICT: Dict = {
   "lang.label": { en: "Language", ar: "اللغة" },
   "lang.en": { en: "English", ar: "الإنجليزية" },
   "lang.ar": { en: "Arabic", ar: "العربية" },
-  "promo": { en: "Free shipping above EGP 2,000", ar: "شحن مجاني للطلبات فوق 2,000 جنيه" },
+  promo: { en: "Free shipping above EGP 2,000", ar: "شحن مجاني للطلبات فوق 2,000 جنيه" },
 
   // sections
   "men.eyebrow": { en: "Men", ar: "رجال" },
@@ -30,7 +30,10 @@ const DICT: Dict = {
   "section.viewall": { en: "View all", ar: "عرض الكل" },
   "section.empty": { en: "No products yet.", ar: "لا توجد منتجات حالياً." },
   "home.title": { en: "Effortless every day.", ar: "أناقة يومية بلا مجهود." },
-  "home.sub": { en: "Considered essentials. Made for the modern wardrobe.", ar: "أساسيات مختارة لخزانة عصرية." },
+  "home.sub": {
+    en: "Considered essentials. Made for the modern wardrobe.",
+    ar: "أساسيات مختارة لخزانة عصرية.",
+  },
   "home.featured.eyebrow": { en: "Featured", ar: "مختارات" },
   "home.featured.title": { en: "Most bought from JABAL", ar: "الأكثر شراءً من JABAL" },
   "home.men": { en: "Men's collection", ar: "مجموعة الرجال" },
@@ -47,15 +50,68 @@ const DICT: Dict = {
   "pdp.addbag": { en: "Add to bag", ar: "أضف إلى الحقيبة" },
   "pdp.selectsize": { en: "Please select a size", ar: "من فضلك اختر مقاساً" },
   "pdp.selectcolor": { en: "Please select a color", ar: "من فضلك اختر لوناً" },
-  "pdp.ship": { en: "Free shipping above EGP 2,000 · 14-day returns", ar: "شحن مجاني فوق 2,000 جنيه · إرجاع خلال 14 يوماً" },
+  "pdp.ship": {
+    en: "Free shipping above EGP 2,000 · 14-day returns",
+    ar: "شحن مجاني فوق 2,000 جنيه · إرجاع خلال 14 يوماً",
+  },
   "pdp.related": { en: "You may also like", ar: "قد يعجبك أيضاً" },
   "pdp.sizeChart": { en: "Size chart", ar: "جدول المقاسات" },
   "favorite.save": { en: "Save", ar: "حفظ" },
   "favorite.saved": { en: "Saved", ar: "محفوظ" },
   "favorite.added": { en: "saved for later.", ar: "تم حفظه لوقت لاحق." },
+  "favorite.updated": { en: "favorite updated.", ar: "تم تحديث المفضلة." },
   "favorite.removed": { en: "Removed from favorites.", ar: "تمت إزالته من المفضلة." },
   "favorite.loginRequired": { en: "Log in to save favorites.", ar: "سجل الدخول لحفظ المفضلة." },
-  "favorite.selectVariant": { en: "Choose a color and size before saving.", ar: "اختر اللون والمقاس قبل الحفظ." },
+  "favorite.selectVariant": {
+    en: "Choose a color and size before saving.",
+    ar: "اختر اللون والمقاس قبل الحفظ.",
+  },
+
+  // account / auth
+  "account.eyebrow": { en: "Account", ar: "الحساب" },
+  "account.title": { en: "My account", ar: "حسابي" },
+  "account.hello": { en: "Hello,", ar: "مرحباً،" },
+  "account.saved.eyebrow": { en: "Saved", ar: "المحفوظات" },
+  "account.saved.title": { en: "Favorites to buy later", ar: "المفضلة للشراء لاحقاً" },
+  "account.keepShopping": { en: "Keep shopping", ar: "متابعة التسوق" },
+  "account.saved.loading": { en: "Loading saved items…", ar: "جاري تحميل المحفوظات…" },
+  "account.saved.empty": {
+    en: "No favorites yet. Tap the heart on any product to save it here.",
+    ar: "لا توجد منتجات محفوظة بعد. اضغط على القلب في أي منتج لحفظه هنا.",
+  },
+  "account.profile": { en: "Profile", ar: "الملف الشخصي" },
+  "account.savedMessage": { en: "Saved.", ar: "تم الحفظ." },
+  "account.saveChanges": { en: "Save changes", ar: "حفظ التغييرات" },
+  "account.saving": { en: "Saving…", ar: "جاري الحفظ…" },
+  "account.orders": { en: "Orders", ar: "الطلبات" },
+  "account.orders.loading": { en: "Loading orders…", ar: "جاري تحميل الطلبات…" },
+  "account.orders.empty": { en: "No orders yet.", ar: "لا توجد طلبات بعد." },
+  "account.startShopping": { en: "Start shopping", ar: "ابدأ التسوق" },
+  "account.needHelp": { en: "Need help?", ar: "تحتاج مساعدة؟" },
+  "auth.login.title": { en: "Log in", ar: "تسجيل الدخول" },
+  "auth.password": { en: "Password", ar: "كلمة المرور" },
+  "auth.newPassword": { en: "New password", ar: "كلمة المرور الجديدة" },
+  "auth.loggingIn": { en: "Logging in…", ar: "جاري تسجيل الدخول…" },
+  "auth.google": { en: "Continue with Google", ar: "المتابعة باستخدام Google" },
+  "auth.forgot": { en: "Forgot password", ar: "نسيت كلمة المرور" },
+  "auth.register": { en: "Register", ar: "إنشاء حساب" },
+  "auth.create.title": { en: "Create account", ar: "إنشاء حساب" },
+  "auth.creating": { en: "Creating…", ar: "جاري إنشاء الحساب…" },
+  "auth.already": { en: "Already have an account?", ar: "لديك حساب بالفعل؟" },
+  "auth.checkEmail": {
+    en: "Check your email to confirm your account.",
+    ar: "تحقق من بريدك الإلكتروني لتأكيد الحساب.",
+  },
+  "auth.reset.title": { en: "Reset password", ar: "إعادة تعيين كلمة المرور" },
+  "auth.reset.sent": {
+    en: "If an account exists for that email, a reset link is on its way.",
+    ar: "إذا كان هناك حساب بهذا البريد، سيصلك رابط إعادة التعيين.",
+  },
+  "auth.reset.sending": { en: "Sending…", ar: "جاري الإرسال…" },
+  "auth.reset.send": { en: "Send reset link", ar: "إرسال رابط التعيين" },
+  "auth.backLogin": { en: "Back to login", ar: "العودة لتسجيل الدخول" },
+  "auth.newPassword.title": { en: "Set new password", ar: "تعيين كلمة مرور جديدة" },
+  "auth.updatePassword": { en: "Update password", ar: "تحديث كلمة المرور" },
 
   // toast
   "toast.added": { en: "Added to bag", ar: "تمت الإضافة إلى الحقيبة" },
@@ -65,14 +121,20 @@ const DICT: Dict = {
   "cart.title": { en: "Your bag", ar: "حقيبتك" },
   "cart.empty.eyebrow": { en: "Your bag", ar: "حقيبتك" },
   "cart.empty.title": { en: "Your bag is empty.", ar: "حقيبتك فارغة." },
-  "cart.empty.sub": { en: "Find something you love from the new collection.", ar: "اكتشف قطعاً جديدة من المجموعة الحالية." },
+  "cart.empty.sub": {
+    en: "Find something you love from the new collection.",
+    ar: "اكتشف قطعاً جديدة من المجموعة الحالية.",
+  },
   "cart.empty.cta": { en: "Shop the collection", ar: "تسوق المجموعة" },
   "cart.eyebrow": { en: "Checkout", ar: "إتمام الشراء" },
   "cart.summary": { en: "Summary", ar: "الملخص" },
   "cart.contact": { en: "Contact", ar: "بيانات التواصل" },
   "cart.address": { en: "Shipping address", ar: "عنوان الشحن" },
   "cart.payment": { en: "Payment", ar: "الدفع" },
-  "cart.login.note": { en: "for faster checkout and order history — or continue as a guest.", ar: "لإتمام الشراء أسرع ومتابعة طلباتك — أو أكمل كضيف." },
+  "cart.login.note": {
+    en: "for faster checkout and order history — or continue as a guest.",
+    ar: "لإتمام الشراء أسرع ومتابعة طلباتك — أو أكمل كضيف.",
+  },
   "cart.subtotal": { en: "Subtotal", ar: "المجموع الفرعي" },
   "cart.shipping": { en: "Shipping", ar: "الشحن" },
   "cart.free": { en: "Free", ar: "مجاني" },
@@ -87,7 +149,10 @@ const DICT: Dict = {
   "cart.apply": { en: "Apply", ar: "تطبيق" },
   "cart.removeCode": { en: "Remove code", ar: "إزالة الكود" },
   "cart.promo.inactive": { en: "Promo code is not active.", ar: "كود الخصم غير نشط." },
-  "cart.promo.invalid": { en: "Promo code does not apply to this order.", ar: "كود الخصم لا ينطبق على هذا الطلب." },
+  "cart.promo.invalid": {
+    en: "Promo code does not apply to this order.",
+    ar: "كود الخصم لا ينطبق على هذا الطلب.",
+  },
   "cart.remove": { en: "Remove", ar: "إزالة" },
   "cart.qty": { en: "Qty", ar: "الكمية" },
   "form.first": { en: "First name", ar: "الاسم الأول" },
@@ -103,7 +168,10 @@ const DICT: Dict = {
   "form.last.placeholder": { en: "Name", ar: "الاسم" },
   "form.email.placeholder": { en: "name@example.com", ar: "name@example.com" },
   "form.phone.placeholder": { en: "01012345678", ar: "01012345678" },
-  "form.fullAddress.placeholder": { en: "Building, street, area, apartment", ar: "العمارة، الشارع، المنطقة، الشقة" },
+  "form.fullAddress.placeholder": {
+    en: "Building, street, area, apartment",
+    ar: "العمارة، الشارع، المنطقة، الشقة",
+  },
   "form.city.placeholder": { en: "Sheikh Zayed", ar: "الشيخ زايد" },
   "form.select": { en: "Select…", ar: "اختر…" },
   "form.save": { en: "Save this information for next time", ar: "احفظ هذه البيانات للمرة القادمة" },
@@ -112,12 +180,21 @@ const DICT: Dict = {
   "pay.cod": { en: "Pay on delivery", ar: "الدفع عند الاستلام" },
   "pay.instapay": { en: "InstaPay", ar: "InstaPay" },
   "pay.cod.note": { en: "You will pay when your order arrives.", ar: "ستدفع عند وصول طلبك." },
-  "pay.instapay.note": { en: "Send the InstaPay transfer to: 01061024345", ar: "أرسل تحويل InstaPay إلى: 01061024345" },
+  "pay.instapay.note": {
+    en: "Send the InstaPay transfer to: 01061024345",
+    ar: "أرسل تحويل InstaPay إلى: 01061024345",
+  },
   "form.place": { en: "Place order", ar: "تأكيد الطلب" },
   "form.placing": { en: "Placing order…", ar: "جاري تأكيد الطلب…" },
   "form.error.fields": { en: "Please fill in all fields.", ar: "من فضلك املأ جميع الحقول." },
-  "form.error.email": { en: "Please enter a valid email.", ar: "من فضلك أدخل بريداً إلكترونياً صحيحاً." },
-  "form.error.phone": { en: "Please enter a valid phone number.", ar: "من فضلك أدخل رقم هاتف صحيح." },
+  "form.error.email": {
+    en: "Please enter a valid email.",
+    ar: "من فضلك أدخل بريداً إلكترونياً صحيحاً.",
+  },
+  "form.error.phone": {
+    en: "Please enter a valid phone number.",
+    ar: "من فضلك أدخل رقم هاتف صحيح.",
+  },
 
   // confirmation
   "ok.eyebrow": { en: "Order confirmed", ar: "تم تأكيد الطلب" },
@@ -149,7 +226,12 @@ const DICT: Dict = {
   "offer.googleSignup": { en: "Continue with Google", ar: "المتابعة باستخدام Google" },
 };
 
-type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: keyof typeof DICT | string) => string; dir: "ltr" | "rtl" };
+type Ctx = {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (k: keyof typeof DICT | string) => string;
+  dir: "ltr" | "rtl";
+};
 const I18nCtx = createContext<Ctx | null>(null);
 
 const KEY = "jabal_lang";
@@ -161,7 +243,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     try {
       const v = localStorage.getItem(KEY);
       if (v === "ar" || v === "en") setLangState(v);
-    } catch {}
+    } catch {
+      // Ignore storage access issues in private browsing modes.
+    }
   }, []);
 
   useEffect(() => {
@@ -172,7 +256,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLang = (l: Lang) => {
     setLangState(l);
-    try { localStorage.setItem(KEY, l); } catch {}
+    try {
+      localStorage.setItem(KEY, l);
+    } catch {
+      // Ignore storage access issues in private browsing modes.
+    }
   };
 
   const t = (k: string) => {

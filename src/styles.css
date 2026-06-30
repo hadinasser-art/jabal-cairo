@@ -65,16 +65,35 @@
 @layer base {
   * {
     border-color: var(--jb-line);
+    box-sizing: border-box;
   }
-  html, body {
+  html,
+  body {
     background-color: var(--jb-bg);
     color: var(--jb-ink);
     font-family: "Inter", system-ui, sans-serif;
     font-size: 14px;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
-  button { font-family: inherit; }
+  body {
+    width: 100%;
+    min-width: 0;
+  }
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
 }
 
 /* JABAL primitives — dark editorial */
@@ -93,10 +112,21 @@
   align-items: center;
   justify-content: center;
   min-height: 46px;
+  max-width: 100%;
+  text-align: center;
+  line-height: 1.2;
+  white-space: normal;
   transition: opacity 0.15s;
 }
-.jb-btn:hover:not(:disabled) { opacity: 0.85; }
-.jb-btn:disabled { background: #2a2a2a; border-color: #2a2a2a; color: #888; cursor: not-allowed; }
+.jb-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+.jb-btn:disabled {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+  color: #888;
+  cursor: not-allowed;
+}
 
 .jb-btn-ghost {
   background: transparent;
@@ -113,9 +143,18 @@
   align-items: center;
   justify-content: center;
   min-height: 46px;
-  transition: background 0.15s, color 0.15s;
+  max-width: 100%;
+  text-align: center;
+  line-height: 1.2;
+  white-space: normal;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
-.jb-btn-ghost:hover { background: #ffffff; color: #000000; }
+.jb-btn-ghost:hover {
+  background: #ffffff;
+  color: #000000;
+}
 
 .jb-input,
 .jb-textarea,
@@ -128,10 +167,19 @@
   width: 100%;
   font-family: inherit;
   color: var(--jb-ink);
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+  min-width: 0;
 }
-.jb-input::placeholder, .jb-textarea::placeholder { color: #777; }
-.jb-input:focus, .jb-textarea:focus, .jb-select:focus {
+.jb-input::placeholder,
+.jb-textarea::placeholder {
+  color: #777;
+}
+.jb-input:focus,
+.jb-textarea:focus,
+.jb-select:focus {
   outline: none;
   border-color: #ffffff;
   background: #141414;
@@ -177,8 +225,12 @@
 }
 
 @keyframes jb-shimmer {
-  0% { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
 }
 .jb-shimmer {
   background: linear-gradient(90deg, #141414 0%, #1f1f1f 50%, #141414 100%);
@@ -190,6 +242,7 @@
 .pc {
   display: block;
   position: relative;
+  min-width: 0;
 }
 .pc-img-wrap {
   aspect-ratio: 3 / 4;
@@ -211,8 +264,10 @@
 }
 .pc-quickadd {
   position: absolute;
-  left: 0; right: 0; bottom: 0;
-  background: rgba(255,255,255,0.95);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
   color: #000;
   text-transform: uppercase;
   font-size: 11px;
@@ -226,13 +281,79 @@
   border: none;
   width: 100%;
 }
-.pc:hover .pc-quickadd, .pc-img-wrap:hover .pc-quickadd { transform: translateY(0); }
+.pc:hover .pc-quickadd,
+.pc-img-wrap:hover .pc-quickadd {
+  transform: translateY(0);
+}
 .pc-soldout {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.7);
-  display: flex; align-items: center; justify-content: center;
-  text-transform: uppercase; font-size: 11px; letter-spacing: 0.2em;
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.2em;
   color: #fff;
+}
+
+.jabal-nav {
+  min-width: 0;
+}
+.jabal-logo-img {
+  height: 24px;
+  width: auto;
+  max-width: 126px;
+  object-fit: contain;
+  filter: invert(1) brightness(2);
+}
+.jabal-header-actions {
+  min-width: 0;
+}
+.jabal-lang-select {
+  width: 82px;
+  min-width: 0;
+}
+.jabal-icon-link {
+  flex: 0 0 auto;
+}
+
+@media (min-width: 768px) {
+  .jabal-logo-img {
+    height: 32px;
+    max-width: 190px;
+  }
+  .jabal-lang-select {
+    width: 104px;
+  }
+}
+
+@media (max-width: 430px) {
+  .jb-btn,
+  .jb-btn-ghost {
+    min-height: 48px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .jb-label,
+  .jb-eyebrow,
+  .jb-link {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .jabal-logo-img {
+    height: 20px;
+    max-width: 104px;
+  }
+  .jabal-lang-select {
+    width: 76px;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    font-size: 10px !important;
+  }
 }
 
 /* RTL */
@@ -250,6 +371,6 @@
   border: 1px solid #ffffff !important;
   background: #000 !important;
   color: #fff !important;
-  box-shadow: 0 10px 30px -10px rgba(255,255,255,0.08) !important;
+  box-shadow: 0 10px 30px -10px rgba(255, 255, 255, 0.08) !important;
   padding: 16px !important;
 }

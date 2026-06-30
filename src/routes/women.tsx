@@ -8,5 +8,7 @@ export const Route = createFileRoute("/women")({
       { name: "description", content: "Women's essentials from JABAL." },
     ],
   }),
-  component: () => <CollectionPage gender="womens" titleKey="home.women" eyebrowKey="women.eyebrow" />,
+  component: () => (
+    <CollectionPage gender="womens" titleKey="home.women" eyebrowKey="women.eyebrow" />
+  ),
 });

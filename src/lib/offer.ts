@@ -83,17 +83,28 @@ export function durationEndTime(offer: Offer): number | null {
 }
 
 export function isDurationStillValid(offer: Offer, now = Date.now()) {
-  if (offer.duration_hours !== null && offer.duration_hours !== undefined && offer.start_date === null) return false;
+  if (
+    offer.duration_hours !== null &&
+    offer.duration_hours !== undefined &&
+    offer.start_date === null
+  )
+    return false;
   const endsAt = durationEndTime(offer);
   return endsAt === null || endsAt > now;
 }
 
 export function getActiveOffers(offers: Offer[], now = Date.now()) {
-  return offers.filter((offer) => isActiveOffer(offer, now) && isDurationStillValid(offer, now)).sort(byPriorityDesc);
+  return offers
+    .filter((offer) => isActiveOffer(offer, now) && isDurationStillValid(offer, now))
+    .sort(byPriorityDesc);
 }
 
 export function getPopupOffer(offers: Offer[], now = Date.now()) {
-  return getActiveOffers(offers, now).find((offer) => offer.code === null && offer.offer_type === "standard") ?? null;
+  return (
+    getActiveOffers(offers, now).find(
+      (offer) => offer.code === null && offer.offer_type === "standard",
+    ) ?? null
+  );
 }
 
 export async function fetchActivePopupOffer(): Promise<Offer | null> {
@@ -145,7 +156,10 @@ export function requiresLoggedInAccount(offer: Offer) {
   return (
     offer.discount_type === "percentage" &&
     Number(offer.discount_value) === 15 &&
-    (accountCopy.includes("account") || accountCopy.includes("sign up") || accountCopy.includes("signup") || offer.first_order_only === true)
+    (accountCopy.includes("account") ||
+      accountCopy.includes("sign up") ||
+      accountCopy.includes("signup") ||
+      offer.first_order_only === true)
   );
 }
 

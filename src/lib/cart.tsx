@@ -15,8 +15,19 @@ export type CartItem = {
 type CartCtx = {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (id: string, size: string | null, color: string | null, variantId?: string | null) => void;
-  updateQty: (id: string, size: string | null, color: string | null, qty: number, variantId?: string | null) => void;
+  removeItem: (
+    id: string,
+    size: string | null,
+    color: string | null,
+    variantId?: string | null,
+  ) => void;
+  updateQty: (
+    id: string,
+    size: string | null,
+    color: string | null,
+    qty: number,
+    variantId?: string | null,
+  ) => void;
   clear: () => void;
   count: number;
   subtotal: number;
@@ -33,7 +44,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) setItems(JSON.parse(raw));
-    } catch {}
+    } catch {
+      // Ignore storage access issues in private browsing modes.
+    }
     setHydrated(true);
   }, []);
 
@@ -41,15 +54,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (hydrated) localStorage.setItem(KEY, JSON.stringify(items));
   }, [items, hydrated]);
 
-  const match = (a: CartItem, id: string, s: string | null, c: string | null, variantId?: string | null) =>
-    a.id === id && (variantId ? a.variantId === variantId : a.selectedSize === s && a.selectedColor === c && !a.variantId);
+  const match = (
+    a: CartItem,
+    id: string,
+    s: string | null,
+    c: string | null,
+    variantId?: string | null,
+  ) =>
+    a.id === id &&
+    (variantId
+      ? a.variantId === variantId
+      : a.selectedSize === s && a.selectedColor === c && !a.variantId);
 
   const addItem = (item: CartItem) =>
     setItems((prev) => {
-      const i = prev.findIndex((p) => match(p, item.id, item.selectedSize, item.selectedColor, item.variantId));
+      const i = prev.findIndex((p) =>
+        match(p, item.id, item.selectedSize, item.selectedColor, item.variantId),
+      );
       if (i >= 0) {
         const next = [...prev];
-        next[i] = { ...next[i], quantity: Math.min(next[i].quantity + item.quantity, item.stock_quantity) };
+        next[i] = {
+          ...next[i],
+          quantity: Math.min(next[i].quantity + item.quantity, item.stock_quantity),
+        };
         return next;
       }
       return [...prev, item];
@@ -58,10 +85,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const removeItem = (id: string, s: string | null, c: string | null, variantId?: string | null) =>
     setItems((prev) => prev.filter((p) => !match(p, id, s, c, variantId)));
 
-  const updateQty = (id: string, s: string | null, c: string | null, qty: number, variantId?: string | null) =>
+  const updateQty = (
+    id: string,
+    s: string | null,
+    c: string | null,
+    qty: number,
+    variantId?: string | null,
+  ) =>
     setItems((prev) =>
       prev.map((p) =>
-        match(p, id, s, c, variantId) ? { ...p, quantity: Math.max(1, Math.min(qty, p.stock_quantity)) } : p,
+        match(p, id, s, c, variantId)
+          ? { ...p, quantity: Math.max(1, Math.min(qty, p.stock_quantity)) }
+          : p,
       ),
     );
 

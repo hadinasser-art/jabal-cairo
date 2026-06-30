@@ -15,7 +15,14 @@ export const Route = createFileRoute("/confirmation")({
 
 type StoredOrder = {
   order_id: string;
-  items: { name: string; quantity: number; price_egp: number; selectedSize: string | null; selectedColor: string | null; image_url?: string | null }[];
+  items: {
+    name: string;
+    quantity: number;
+    price_egp: number;
+    selectedSize: string | null;
+    selectedColor: string | null;
+    image_url?: string | null;
+  }[];
   subtotal?: number;
   discount?: number;
   discounts?: { title: string; amount: number }[];
@@ -35,7 +42,9 @@ function ConfirmationPage() {
     try {
       const raw = sessionStorage.getItem("jabal_last_order");
       if (raw) setStored(JSON.parse(raw));
-    } catch {}
+    } catch {
+      // Ignore malformed session storage data.
+    }
   }, []);
 
   const copy = async () => {
@@ -43,7 +52,9 @@ function ConfirmationPage() {
       await navigator.clipboard.writeText(orderId);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch {
+      // Clipboard may be unavailable in some browser contexts.
+    }
   };
 
   const isInstapay = stored?.payment_method === "instapay";
@@ -52,20 +63,59 @@ function ConfirmationPage() {
     <Layout>
       <div className="max-w-[680px] mx-auto px-6 md:px-10 py-16 md:py-20">
         <div className="jb-eyebrow">{t("ok.eyebrow")}</div>
-        <h1 style={{ marginTop: 12, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", fontWeight: 300, color: "#fff" }}>
+        <h1
+          style={{
+            marginTop: 12,
+            fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+            fontWeight: 300,
+            color: "#fff",
+          }}
+        >
           {t("ok.title")}
         </h1>
 
         <div className="mt-8 p-6" style={{ background: "#0a0a0a", border: "1px solid #262626" }}>
           <div className="jb-eyebrow">{t("ok.orderid")}</div>
-          <div className="mt-2" style={{ fontSize: 24, letterSpacing: "0.05em", color: "#fff", fontWeight: 500 }}>{orderId}</div>
-          <button onClick={copy} style={{ marginTop: 10, fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "#fff", background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 4 }}>
+          <div
+            className="mt-2"
+            style={{
+              fontSize: 24,
+              letterSpacing: "0.05em",
+              color: "#fff",
+              fontWeight: 500,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {orderId}
+          </div>
+          <button
+            onClick={copy}
+            style={{
+              marginTop: 10,
+              fontSize: 12,
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              color: "#fff",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              textDecoration: "underline",
+              textUnderlineOffset: 4,
+            }}
+          >
             {copied ? t("ok.copied") : t("ok.copy")}
           </button>
         </div>
 
         <div className="mt-8 p-6 md:p-8" style={{ background: "#fff", color: "#000" }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "#555" }}>
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: "#555",
+            }}
+          >
             {isInstapay ? t("pay.instapay") : t("pay.cod.full")}
           </div>
           <div style={{ marginTop: 12, fontSize: 16, lineHeight: 1.6 }}>
@@ -78,40 +128,85 @@ function ConfirmationPage() {
             <div className="jb-eyebrow mt-10">{t("cart.summary")}</div>
             <div className="mt-4" style={{ border: "1px solid #262626" }}>
               {stored.items.map((it, idx) => (
-                <div key={idx} className="flex justify-between p-4" style={{ borderBottom: "1px solid #262626", fontSize: 14 }}>
-                  <div>
+                <div
+                  key={idx}
+                  className="flex justify-between gap-3 p-4"
+                  style={{ borderBottom: "1px solid #262626", fontSize: 14 }}
+                >
+                  <div style={{ minWidth: 0 }}>
                     <div style={{ color: "#fff" }}>{it.name}</div>
-                    <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "#9a9a9a", marginTop: 4 }}>
-                      {[it.selectedSize, it.selectedColor].filter(Boolean).join(" · ")} · Qty {it.quantity}
+                    <div
+                      style={{
+                        fontSize: 11,
+                        letterSpacing: "0.15em",
+                        textTransform: "uppercase",
+                        color: "#9a9a9a",
+                        marginTop: 4,
+                      }}
+                    >
+                      {[it.selectedSize, it.selectedColor].filter(Boolean).join(" · ")} · Qty{" "}
+                      {it.quantity}
                     </div>
                   </div>
-                  <div style={{ color: "#fff" }}>{formatPrice(it.price_egp * it.quantity)}</div>
+                  <div style={{ color: "#fff", whiteSpace: "nowrap" }}>
+                    {formatPrice(it.price_egp * it.quantity)}
+                  </div>
                 </div>
               ))}
               {typeof stored.subtotal === "number" && (
-                <div className="flex justify-between p-4" style={{ borderBottom: "1px solid #262626", fontSize: 13, color: "#9a9a9a" }}>
-                  <span>{t("cart.subtotal")}</span><span style={{ color: "#fff" }}>{formatPrice(stored.subtotal)}</span>
+                <div
+                  className="flex justify-between p-4"
+                  style={{ borderBottom: "1px solid #262626", fontSize: 13, color: "#9a9a9a" }}
+                >
+                  <span>{t("cart.subtotal")}</span>
+                  <span style={{ color: "#fff" }}>{formatPrice(stored.subtotal)}</span>
                 </div>
               )}
               {typeof stored.discount === "number" && stored.discount > 0 && (
                 <>
-                  {stored.discounts && stored.discounts.length > 0 ? stored.discounts.map((discount, idx) => (
-                    <div key={`${discount.title}-${idx}`} className="flex justify-between p-4" style={{ borderBottom: "1px solid #262626", fontSize: 13, color: "#9a9a9a" }}>
-                      <span>{discount.title}</span><span style={{ color: "#fff" }}>- {formatPrice(discount.amount)}</span>
-                    </div>
-                  )) : (
-                    <div className="flex justify-between p-4" style={{ borderBottom: "1px solid #262626", fontSize: 13, color: "#9a9a9a" }}>
-                      <span>{t("cart.savings")}</span><span style={{ color: "#fff" }}>- {formatPrice(stored.discount ?? 0)}</span>
+                  {stored.discounts && stored.discounts.length > 0 ? (
+                    stored.discounts.map((discount, idx) => (
+                      <div
+                        key={`${discount.title}-${idx}`}
+                        className="flex justify-between gap-3 p-4"
+                        style={{
+                          borderBottom: "1px solid #262626",
+                          fontSize: 13,
+                          color: "#9a9a9a",
+                        }}
+                      >
+                        <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+                          {discount.title}
+                        </span>
+                        <span style={{ color: "#fff", whiteSpace: "nowrap" }}>
+                          - {formatPrice(discount.amount)}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      className="flex justify-between p-4"
+                      style={{ borderBottom: "1px solid #262626", fontSize: 13, color: "#9a9a9a" }}
+                    >
+                      <span>{t("cart.savings")}</span>
+                      <span style={{ color: "#fff" }}>- {formatPrice(stored.discount ?? 0)}</span>
                     </div>
                   )}
                 </>
               )}
               {typeof stored.shipping_fee === "number" && (
-                <div className="flex justify-between p-4" style={{ borderBottom: "1px solid #262626", fontSize: 13, color: "#9a9a9a" }}>
-                  <span>{t("cart.shipping")}</span><span style={{ color: "#fff" }}>{formatPrice(stored.shipping_fee)}</span>
+                <div
+                  className="flex justify-between p-4"
+                  style={{ borderBottom: "1px solid #262626", fontSize: 13, color: "#9a9a9a" }}
+                >
+                  <span>{t("cart.shipping")}</span>
+                  <span style={{ color: "#fff" }}>{formatPrice(stored.shipping_fee)}</span>
                 </div>
               )}
-              <div className="flex justify-between p-4" style={{ background: "#0a0a0a", fontSize: 14 }}>
+              <div
+                className="flex justify-between p-4"
+                style={{ background: "#0a0a0a", fontSize: 14 }}
+              >
                 <div style={{ color: "#fff" }}>{t("cart.total")}</div>
                 <div style={{ color: "#fff" }}>{formatPrice(stored.total)}</div>
               </div>
@@ -120,12 +215,23 @@ function ConfirmationPage() {
         )}
 
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link to="/shop" className="jb-btn">{t("ok.continue")}</Link>
-          <Link to="/account" className="jb-btn-ghost">{t("ok.orders")}</Link>
+          <Link to="/shop" className="jb-btn">
+            {t("ok.continue")}
+          </Link>
+          <Link to="/account" className="jb-btn-ghost">
+            {t("ok.orders")}
+          </Link>
         </div>
 
         <div style={{ marginTop: 28, fontSize: 12, color: "#9a9a9a" }}>
-          {t("cart.questions")} <a href={`mailto:${JABAL_SUPPORT_EMAIL}`} style={{ color: "#fff" }} className="hover:underline">{JABAL_SUPPORT_EMAIL}</a>
+          {t("cart.questions")}{" "}
+          <a
+            href={`mailto:${JABAL_SUPPORT_EMAIL}`}
+            style={{ color: "#fff" }}
+            className="hover:underline"
+          >
+            {JABAL_SUPPORT_EMAIL}
+          </a>
         </div>
       </div>
     </Layout>

@@ -1,7 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { fetchOffers, getActiveOffers, getFirstOrderEligible, durationEndTime, type Offer } from "@/lib/offer";
+import {
+  fetchOffers,
+  getActiveOffers,
+  getFirstOrderEligible,
+  durationEndTime,
+  type Offer,
+} from "@/lib/offer";
 import { useI18n } from "@/lib/i18n";
 
 type Props = {
@@ -26,14 +32,18 @@ export function OfferTopBar({ user }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const startX = useRef<number | null>(null);
 
-  useEffect(() => { fetchOffers().then(setOffers); }, []);
+  useEffect(() => {
+    fetchOffers().then(setOffers);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     getFirstOrderEligible(user).then((eligible) => {
       if (!cancelled) setFirstOrderEligible(eligible);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   useEffect(() => {
@@ -41,9 +51,13 @@ export function OfferTopBar({ user }: Props) {
     return () => window.clearInterval(interval);
   }, []);
 
-  const visibleOffers = useMemo(() => (
-    getActiveOffers(offers, now).filter((candidate) => !candidate.first_order_only || firstOrderEligible)
-  ), [offers, firstOrderEligible, now]);
+  const visibleOffers = useMemo(
+    () =>
+      getActiveOffers(offers, now).filter(
+        (candidate) => !candidate.first_order_only || firstOrderEligible,
+      ),
+    [offers, firstOrderEligible, now],
+  );
 
   useEffect(() => {
     setActiveIndex(0);
@@ -134,13 +148,21 @@ export function OfferTopBar({ user }: Props) {
                 }}
               >
                 {visibleOffers.length > 1 && (
-                  <span style={{ color: "#555", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+                  <span
+                    style={{ color: "#555", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}
+                  >
                     {index + 1}/{visibleOffers.length}
                   </span>
                 )}
                 <span style={{ fontWeight: 700 }}>{visibleOffer.title}</span>
                 {visibleOffer.description && (
-                  <span style={{ color: "#333", letterSpacing: lang === "ar" ? 0 : "0.04em", textTransform: "none" }}>
+                  <span
+                    style={{
+                      color: "#333",
+                      letterSpacing: lang === "ar" ? 0 : "0.04em",
+                      textTransform: "none",
+                    }}
+                  >
                     {visibleOffer.description}
                   </span>
                 )}
@@ -154,7 +176,15 @@ export function OfferTopBar({ user }: Props) {
                     {t("offer.ends")} {remaining}
                   </span>
                 )}
-                <Link to="/shop" style={{ color: "#000", textDecoration: "underline", textUnderlineOffset: 3, fontWeight: 700 }}>
+                <Link
+                  to="/shop"
+                  style={{
+                    color: "#000",
+                    textDecoration: "underline",
+                    textUnderlineOffset: 3,
+                    fontWeight: 700,
+                  }}
+                >
                   {t("offer.shop")}
                 </Link>
               </div>
@@ -164,25 +194,34 @@ export function OfferTopBar({ user }: Props) {
       </div>
 
       {visibleOffers.length > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 10, paddingBottom: 8 }}>
-            {visibleOffers.map((visibleOffer, index) => (
-              <button
-                key={visibleOffer.id}
-                type="button"
-                aria-label={`${t("offer.show")} ${index + 1}: ${visibleOffer.title}`}
-                onClick={() => goTo(index)}
-                style={{
-                  width: index === activeIndex ? 14 : 6,
-                  height: 6,
-                  borderRadius: 999,
-                  border: "1px solid #000",
-                  background: index === activeIndex ? "#000" : "transparent",
-                  padding: 0,
-                  cursor: "pointer",
-                  transition: "width 180ms ease, background 180ms ease",
-                }}
-              />
-            ))}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            height: 10,
+            paddingBottom: 8,
+          }}
+        >
+          {visibleOffers.map((visibleOffer, index) => (
+            <button
+              key={visibleOffer.id}
+              type="button"
+              aria-label={`${t("offer.show")} ${index + 1}: ${visibleOffer.title}`}
+              onClick={() => goTo(index)}
+              style={{
+                width: index === activeIndex ? 14 : 6,
+                height: 6,
+                borderRadius: 999,
+                border: "1px solid #000",
+                background: index === activeIndex ? "#000" : "transparent",
+                padding: 0,
+                cursor: "pointer",
+                transition: "width 180ms ease, background 180ms ease",
+              }}
+            />
+          ))}
         </div>
       )}
     </div>

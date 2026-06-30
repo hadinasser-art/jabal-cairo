@@ -25,7 +25,9 @@ function NotFoundComponent() {
         <h1 className="text-7xl font-light">404</h1>
         <h2 className="mt-4 text-xl">Page not found</h2>
         <div className="mt-6">
-          <Link to="/" className="jb-btn">Go home</Link>
+          <Link to="/" className="jb-btn">
+            Go home
+          </Link>
         </div>
       </div>
     </div>
@@ -43,7 +45,15 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
       <div className="max-w-md text-center">
         <h1 className="text-xl">This page didn't load</h1>
         <div className="mt-6">
-          <button onClick={() => { router.invalidate(); reset(); }} className="jb-btn">Try again</button>
+          <button
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+            className="jb-btn"
+          >
+            Try again
+          </button>
         </div>
       </div>
     </div>

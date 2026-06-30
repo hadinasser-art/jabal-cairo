@@ -23,7 +23,10 @@ function CallbackPage() {
           first_name: meta.given_name || first || null,
           last_name: meta.family_name || rest.join(" ") || null,
           email: u.email || null,
-          phone: null, full_address: null, city: null, governorate: null,
+          phone: null,
+          full_address: null,
+          city: null,
+          governorate: null,
         });
         navigate({ to: "/account" });
       } else {
@@ -34,7 +37,15 @@ function CallbackPage() {
 
   return (
     <Layout>
-      <div className="px-6 py-24 text-center" style={{ color: "#9a9a9a", fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase" }}>
+      <div
+        className="px-6 py-24 text-center"
+        style={{
+          color: "#9a9a9a",
+          fontSize: 12,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+        }}
+      >
         Signing you in…
       </div>
     </Layout>
