@@ -1,45 +1,50 @@
 import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
-import { formatPrice, type Item } from "@/lib/supabase";
+import { formatPrice, sortSizes, type Item } from "@/lib/supabase";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 export function ProductCard({ item }: { item: Item }) {
   const { t } = useI18n();
 
   const swatches = (item.color || []).slice(0, 4);
+  const sizes = sortSizes(item.size || []);
   const soldOut = item.sold_out || item.stock_quantity <= 0;
 
   return (
-    <Link to="/product/$id" params={{ id: item.id }} className="pc group">
-      <div className="pc-img-wrap">
-        {item.image_url ? (
-          <img src={item.image_url} alt={item.name} className="pc-img" loading="lazy" />
-        ) : (
-          <div style={{ width: "100%", height: "100%", background: "#141414" }} />
-        )}
-        {soldOut && (
-          <div className="pc-soldout">{t("card.soldout")}</div>
-        )}
-      </div>
-      <div className="mt-3">
-        <div style={{ fontSize: 13, color: "#fff" }}>{item.name}</div>
-        <div style={{ fontSize: 13, color: "#9a9a9a", marginTop: 2 }}>{formatPrice(item.price_egp)}</div>
-        {swatches.length > 0 && (
-          <div className="flex gap-[6px] mt-2">
-            {swatches.map((c) => (
-              <span key={c} title={c} style={{
-                width: 10, height: 10, borderRadius: 999, background: swatchColor(c),
-                border: "1px solid #262626", display: "inline-block",
-              }} />
-            ))}
-          </div>
-        )}
-        {item.size && item.size.length > 0 && (
-          <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "#777", marginTop: 6 }}>
-            {item.size.join(" · ")}
-          </div>
-        )}
-      </div>
-    </Link>
+    <div className="pc group">
+      <Link to="/product/$id" params={{ id: item.id }} style={{ display: "block" }}>
+        <div className="pc-img-wrap">
+          {item.image_url ? (
+            <img src={item.image_url} alt={item.name} className="pc-img" loading="lazy" />
+          ) : (
+            <div style={{ width: "100%", height: "100%", background: "#141414" }} />
+          )}
+          {soldOut && (
+            <div className="pc-soldout">{t("card.soldout")}</div>
+          )}
+        </div>
+        <div className="mt-3">
+          <div style={{ fontSize: 13, color: "#fff" }}>{item.name}</div>
+          <div style={{ fontSize: 13, color: "#9a9a9a", marginTop: 2 }}>{formatPrice(item.price_egp)}</div>
+          {swatches.length > 0 && (
+            <div className="flex gap-[6px] mt-2">
+              {swatches.map((c) => (
+                <span key={c} title={c} style={{
+                  width: 10, height: 10, borderRadius: 999, background: swatchColor(c),
+                  border: "1px solid #262626", display: "inline-block",
+                }} />
+              ))}
+            </div>
+          )}
+          {sizes.length > 0 && (
+            <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "#777", marginTop: 6 }}>
+              {sizes.join(" · ")}
+            </div>
+          )}
+        </div>
+      </Link>
+      <FavoriteButton itemId={item.id} itemName={item.name} className="pc-favorite" />
+    </div>
   );
 }
 

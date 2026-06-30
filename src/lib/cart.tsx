@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 export type CartItem = {
   id: string;
+  variantId?: string | null;
   name: string;
   price_egp: number;
   image_url: string | null;
@@ -14,8 +15,8 @@ export type CartItem = {
 type CartCtx = {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (id: string, size: string | null, color: string | null) => void;
-  updateQty: (id: string, size: string | null, color: string | null, qty: number) => void;
+  removeItem: (id: string, size: string | null, color: string | null, variantId?: string | null) => void;
+  updateQty: (id: string, size: string | null, color: string | null, qty: number, variantId?: string | null) => void;
   clear: () => void;
   count: number;
   subtotal: number;
@@ -40,12 +41,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (hydrated) localStorage.setItem(KEY, JSON.stringify(items));
   }, [items, hydrated]);
 
-  const match = (a: CartItem, id: string, s: string | null, c: string | null) =>
-    a.id === id && a.selectedSize === s && a.selectedColor === c;
+  const match = (a: CartItem, id: string, s: string | null, c: string | null, variantId?: string | null) =>
+    a.id === id && (variantId ? a.variantId === variantId : a.selectedSize === s && a.selectedColor === c && !a.variantId);
 
   const addItem = (item: CartItem) =>
     setItems((prev) => {
-      const i = prev.findIndex((p) => match(p, item.id, item.selectedSize, item.selectedColor));
+      const i = prev.findIndex((p) => match(p, item.id, item.selectedSize, item.selectedColor, item.variantId));
       if (i >= 0) {
         const next = [...prev];
         next[i] = { ...next[i], quantity: Math.min(next[i].quantity + item.quantity, item.stock_quantity) };
@@ -54,13 +55,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, item];
     });
 
-  const removeItem = (id: string, s: string | null, c: string | null) =>
-    setItems((prev) => prev.filter((p) => !match(p, id, s, c)));
+  const removeItem = (id: string, s: string | null, c: string | null, variantId?: string | null) =>
+    setItems((prev) => prev.filter((p) => !match(p, id, s, c, variantId)));
 
-  const updateQty = (id: string, s: string | null, c: string | null, qty: number) =>
+  const updateQty = (id: string, s: string | null, c: string | null, qty: number, variantId?: string | null) =>
     setItems((prev) =>
       prev.map((p) =>
-        match(p, id, s, c) ? { ...p, quantity: Math.max(1, Math.min(qty, p.stock_quantity)) } : p,
+        match(p, id, s, c, variantId) ? { ...p, quantity: Math.max(1, Math.min(qty, p.stock_quantity)) } : p,
       ),
     );
 

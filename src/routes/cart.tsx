@@ -208,6 +208,7 @@ function CartPage() {
         customer_phone: form.phone.trim(),
         shipping_address: shippingAddress,
         item_id: isUuid(it.id) ? it.id : null,
+        variant_id: it.variantId ?? null,
         item_name: it.name,
         quantity: it.quantity,
         total_price_egp: it.price_egp * it.quantity,
@@ -348,7 +349,7 @@ function CartPage() {
             <div className="jb-eyebrow">{t("cart.orderSummary")}</div>
             <div className="mt-4 space-y-4">
               {items.map((it) => (
-                <div key={`${it.id}-${it.selectedSize}-${it.selectedColor}`} className="flex gap-3">
+                <div key={`${it.id}-${it.variantId ?? ""}-${it.selectedSize}-${it.selectedColor}`} className="flex gap-3">
                   <div style={{ width: 64, aspectRatio: "3/4", background: "#141414", flexShrink: 0 }}>
                     {it.image_url && <img src={it.image_url} alt={it.name} className="w-full h-full object-cover" />}
                   </div>
@@ -360,10 +361,10 @@ function CartPage() {
                     <div className="flex items-center gap-3 mt-2" style={{ fontSize: 12, color: "#9a9a9a" }}>
                       <input
                         type="number" min={1} max={it.stock_quantity} value={it.quantity}
-                        onChange={(e) => updateQty(it.id, it.selectedSize, it.selectedColor, Number(e.target.value) || 1)}
+                        onChange={(e) => updateQty(it.id, it.selectedSize, it.selectedColor, Number(e.target.value) || 1, it.variantId)}
                         className="jb-input" style={{ width: 56, padding: "4px 6px", fontSize: 12 }}
                       />
-                      <button type="button" onClick={() => removeItem(it.id, it.selectedSize, it.selectedColor)}
+                      <button type="button" onClick={() => removeItem(it.id, it.selectedSize, it.selectedColor, it.variantId)}
                         style={{ background: "transparent", border: "none", color: "#9a9a9a", cursor: "pointer", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "underline" }}>
                         {t("cart.remove")}
                       </button>

@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/lib/auth";
 import { loadProfile, upsertProfile, type CustomerProfile } from "@/lib/profile";
-import { supabase, formatPrice, EGYPT_GOVERNORATES, JABAL_SUPPORT_EMAIL } from "@/lib/supabase";
+import { supabase, formatPrice, EGYPT_GOVERNORATES, JABAL_SUPPORT_EMAIL, type Item } from "@/lib/supabase";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 export const Route = createFileRoute("/account")({
   head: () => ({ meta: [{ title: "My Account — JABAL" }] }),
@@ -18,11 +19,26 @@ type OrderRow = {
   order_summary: string;
 };
 
+type FavoriteRow = {
+  id: string;
+  created_at: string;
+  variant_id: string | null;
+  item: Item | null;
+  variant: {
+    id: string;
+    color: string;
+    size: string;
+    stock_quantity: number;
+    image_url: string | null;
+  } | null;
+};
+
 function AccountPage() {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
+  const [favorites, setFavorites] = useState<FavoriteRow[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
@@ -40,6 +56,15 @@ function AccountPage() {
     supabase.from("combined_orders").select("order_id,created_at,total_price_egp,status,order_summary")
       .eq("user_id", user.id).order("created_at", { ascending: false })
       .then(({ data }) => setOrders((data as OrderRow[]) || []));
+    supabase
+      .from("favorites")
+      .select("id,created_at,variant_id,item:items(id,name,description,price_egp,image_url,category,size,color,stock_quantity,sold_out,created_at,gender),variant:product_variants(id,color,size,stock_quantity,image_url)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) console.warn("favorites", error.message);
+        setFavorites((data as FavoriteRow[]) || []);
+      });
   }, [user, loading, navigate]);
 
   if (loading || !user || !profile) {
@@ -71,6 +96,25 @@ function AccountPage() {
           </div>
           <button onClick={() => signOut().then(() => navigate({ to: "/" }))} className="jb-btn-ghost">Logout</button>
         </div>
+
+        <section style={{ border: "1px solid #262626", padding: 22, marginBottom: 34 }}>
+          <div className="flex items-end justify-between gap-4 flex-wrap" style={{ marginBottom: 18 }}>
+            <div>
+              <div className="jb-eyebrow">Saved</div>
+              <h2 style={{ fontSize: 18, color: "#fff", fontWeight: 400, marginTop: 6 }}>Favorites to buy later</h2>
+            </div>
+            <Link to="/shop" className="jb-link">Keep shopping</Link>
+          </div>
+          {favorites === null ? (
+            <div style={{ color: "#9a9a9a", fontSize: 13 }}>Loading saved items…</div>
+          ) : favorites.filter((fav) => fav.item).length === 0 ? (
+            <div style={{ color: "#9a9a9a", fontSize: 13 }}>No favorites yet. Tap the heart on any product to save it here.</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+              {favorites.map((fav) => fav.item && <FavoriteItem key={fav.id} favorite={fav} />)}
+            </div>
+          )}
+        </section>
 
         <div className="grid md:grid-cols-2 gap-10">
           <form onSubmit={save} className="space-y-4">
@@ -123,6 +167,43 @@ function AccountPage() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+function FavoriteItem({ favorite }: { favorite: FavoriteRow }) {
+  if (!favorite.item) return null;
+  const image = favorite.variant?.image_url || favorite.item.image_url;
+  const variantText = favorite.variant ? `${favorite.variant.color} · ${favorite.variant.size}` : null;
+  const available = favorite.variant ? favorite.variant.stock_quantity > 0 : !favorite.item.sold_out && favorite.item.stock_quantity > 0;
+
+  return (
+    <div className="pc group">
+      <Link to="/product/$id" params={{ id: favorite.item.id }} style={{ display: "block" }}>
+        <div className="pc-img-wrap">
+          {image ? (
+            <img src={image} alt={[favorite.item.name, variantText].filter(Boolean).join(" - ")} className="pc-img" loading="lazy" />
+          ) : (
+            <div style={{ width: "100%", height: "100%", background: "#141414" }} />
+          )}
+          {!available && <div className="pc-soldout">Sold out</div>}
+        </div>
+        <div className="mt-3">
+          <div style={{ fontSize: 13, color: "#fff" }}>{favorite.item.name}</div>
+          {variantText && (
+            <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "#9a9a9a", marginTop: 4 }}>
+              {variantText}
+            </div>
+          )}
+          <div style={{ fontSize: 13, color: "#9a9a9a", marginTop: 4 }}>{formatPrice(favorite.item.price_egp)}</div>
+        </div>
+      </Link>
+      <FavoriteButton
+        itemId={favorite.item.id}
+        itemName={favorite.item.name}
+        variantId={favorite.variant_id}
+        className="pc-favorite"
+      />
+    </div>
   );
 }
 

@@ -50,6 +50,12 @@ const DICT: Dict = {
   "pdp.ship": { en: "Free shipping above EGP 2,000 · 14-day returns", ar: "شحن مجاني فوق 2,000 جنيه · إرجاع خلال 14 يوماً" },
   "pdp.related": { en: "You may also like", ar: "قد يعجبك أيضاً" },
   "pdp.sizeChart": { en: "Size chart", ar: "جدول المقاسات" },
+  "favorite.save": { en: "Save", ar: "حفظ" },
+  "favorite.saved": { en: "Saved", ar: "محفوظ" },
+  "favorite.added": { en: "saved for later.", ar: "تم حفظه لوقت لاحق." },
+  "favorite.removed": { en: "Removed from favorites.", ar: "تمت إزالته من المفضلة." },
+  "favorite.loginRequired": { en: "Log in to save favorites.", ar: "سجل الدخول لحفظ المفضلة." },
+  "favorite.selectVariant": { en: "Choose a color and size before saving.", ar: "اختر اللون والمقاس قبل الحفظ." },
 
   // toast
   "toast.added": { en: "Added to bag", ar: "تمت الإضافة إلى الحقيبة" },

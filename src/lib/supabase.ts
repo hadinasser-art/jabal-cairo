@@ -36,6 +36,26 @@ export type Item = {
   gender?: Gender | null;
 };
 
+export type ProductVariant = {
+  id: string;
+  item_id: string;
+  color: string;
+  size: string;
+  stock_quantity: number;
+  image_url: string | null;
+  sku: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Favorite = {
+  id: string;
+  user_id: string;
+  item_id: string;
+  variant_id: string | null;
+  created_at: string;
+};
+
 export type Order = {
   id: string;
   order_id: string;
@@ -54,6 +74,18 @@ export type Order = {
 
 export const formatPrice = (p: number) =>
   "EGP " + Math.round(p).toLocaleString("en-EG");
+
+export const SIZE_ORDER = ["S", "M", "L", "XL", "XXL"] as const;
+
+export function sizeSortValue(size: string) {
+  const normalized = size.trim().toUpperCase();
+  const index = SIZE_ORDER.findIndex((s) => s === normalized);
+  return index === -1 ? SIZE_ORDER.length : index;
+}
+
+export function sortSizes(sizes: string[]) {
+  return [...sizes].sort((a, b) => sizeSortValue(a) - sizeSortValue(b) || a.localeCompare(b));
+}
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
