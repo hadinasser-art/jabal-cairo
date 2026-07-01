@@ -16,7 +16,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 export const JABAL_LOGO_URL =
   "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/logo/JABAL.png";
 
-export const JABAL_SUPPORT_EMAIL = "jabal.egy@gmail.com";
+export const JABAL_SUPPORT_EMAIL = "support@jabalwear.com";
 export const JABAL_SUPPORT_PHONE = "01061024345";
 
 export type Gender = "mens" | "womens" | "unisex";
