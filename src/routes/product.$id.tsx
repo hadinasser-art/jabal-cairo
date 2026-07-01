@@ -35,7 +35,7 @@ const OVERSIZED_TSHIRT_GALLERY_IMAGES: Record<string, { label: string; url: stri
   Orange: [
     {
       label: "Front",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/front.png",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/front.png?v=20260702",
     },
     {
       label: "Side",
