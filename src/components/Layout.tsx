@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ShoppingBag, UserRound } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
@@ -13,16 +13,6 @@ export function Layout({ children }: { children: ReactNode }) {
   const { lang, setLang, t } = useI18n();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [shopOpen, setShopOpen] = useState(false);
-  const shopRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (shopRef.current && !shopRef.current.contains(e.target as Node)) setShopOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
 
   const handleLogout = async () => {
     await signOut();
@@ -64,65 +54,6 @@ export function Layout({ children }: { children: ReactNode }) {
             >
               {t("nav.women")}
             </Link>
-            <div
-              ref={shopRef}
-              className="relative"
-              onMouseEnter={() => setShopOpen(true)}
-              onMouseLeave={() => setShopOpen(false)}
-            >
-              <Link
-                to="/shop"
-                className="hover:underline"
-                style={{ color: "#fff", textUnderlineOffset: 4 }}
-                onClick={() => setShopOpen(false)}
-              >
-                {t("nav.shop")} ▾
-              </Link>
-              {shopOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    insetInlineStart: 0,
-                    marginTop: 8,
-                    background: "#000",
-                    border: "1px solid #fff",
-                    minWidth: 200,
-                    zIndex: 200,
-                  }}
-                >
-                  <Link
-                    to="/men"
-                    onClick={() => setShopOpen(false)}
-                    style={{
-                      display: "block",
-                      padding: "14px 18px",
-                      color: "#fff",
-                      fontSize: 11,
-                      letterSpacing: lang === "ar" ? 0 : "0.2em",
-                      textTransform: "uppercase",
-                      borderBottom: "1px solid #262626",
-                    }}
-                  >
-                    {t("nav.shopmen")}
-                  </Link>
-                  <Link
-                    to="/women"
-                    onClick={() => setShopOpen(false)}
-                    style={{
-                      display: "block",
-                      padding: "14px 18px",
-                      color: "#fff",
-                      fontSize: 11,
-                      letterSpacing: lang === "ar" ? 0 : "0.2em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {t("nav.shopwomen")}
-                  </Link>
-                </div>
-              )}
-            </div>
           </div>
 
           <div className="jabal-header-actions flex items-center gap-2 sm:gap-3 lg:gap-5">
@@ -265,7 +196,6 @@ export function Layout({ children }: { children: ReactNode }) {
             {[
               { to: "/men", label: t("nav.men") },
               { to: "/women", label: t("nav.women") },
-              { to: "/shop", label: t("nav.shop") },
             ].map((l) => (
               <Link
                 key={l.to}

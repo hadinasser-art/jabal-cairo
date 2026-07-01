@@ -6,7 +6,6 @@ import { useAuth } from "@/lib/auth";
 import {
   supabase,
   formatPrice,
-  isUuid,
   EGYPT_GOVERNORATES,
   governorateLabel,
   JABAL_SUPPORT_EMAIL,
@@ -19,7 +18,6 @@ import {
   findMatchingCodeOffer,
   getFirstOrderEligible,
   getOfferCopy,
-  incrementOfferUses,
   type Offer,
 } from "@/lib/offer";
 import { useI18n } from "@/lib/i18n";
@@ -39,6 +37,16 @@ type FormState = {
   full_address: string;
   city: string;
   governorate: string;
+};
+
+type PlaceOrderItem = {
+  item_id: string;
+  variant_id: string | null;
+  item_name: string;
+  quantity: number;
+  total_price_egp: number;
+  selected_size: string | null;
+  selected_color: string | null;
 };
 
 const empty: FormState = {
@@ -225,10 +233,6 @@ function CartPage() {
       setOffers(latestOffers);
       setFirstOrderEligible(latestFirstOrderEligible);
 
-      const { data: orderIdData, error: orderIdError } = await supabase.rpc("generate_order_id");
-      if (orderIdError) throw new Error("Could not generate order ID: " + orderIdError.message);
-      const orderId = orderIdData as string;
-
       const customerName = `${form.first_name.trim()} ${form.last_name.trim()}`.trim();
       const shippingAddress = `${form.full_address.trim()}, ${form.city.trim()}, ${form.governorate.trim()}`;
       const totalItems = items.reduce((s, it) => s + it.quantity, 0);
@@ -239,8 +243,17 @@ function CartPage() {
         })
         .join(" | ");
 
-      const combinedPayload: Record<string, unknown> = {
-        order_id: orderId,
+      const orderItems: PlaceOrderItem[] = items.map((it) => ({
+        item_id: it.id,
+        variant_id: it.variantId ?? null,
+        item_name: it.name,
+        quantity: it.quantity,
+        total_price_egp: it.price_egp * it.quantity,
+        selected_size: it.selectedSize,
+        selected_color: it.selectedColor,
+      }));
+
+      const orderPayload = {
         customer_name: customerName,
         customer_email: form.email.trim(),
         customer_phone: form.phone.trim(),
@@ -254,36 +267,17 @@ function CartPage() {
         payment_method: payment,
         status: "pending",
         user_id: user?.id ?? null,
+        offer_id: submittedAppliedOffers[0]?.offer.id ?? null,
+        discount_amount_egp: submittedTotals.discountTotal,
+        applied_offer_ids: submittedAppliedOffers.map((applied) => applied.offer.id),
+        items: orderItems,
       };
-      if (submittedAppliedOffers.length > 0) {
-        combinedPayload.offer_id = submittedAppliedOffers[0].offer.id;
-        combinedPayload.discount_amount_egp = submittedTotals.discountTotal;
-      }
 
-      const { error: combinedError } = await supabase
-        .from("combined_orders")
-        .insert(combinedPayload);
-      if (combinedError) throw new Error("Could not save order: " + combinedError.message);
-
-      const rows = items.map((it) => ({
-        order_id: orderId,
-        customer_name: customerName,
-        customer_email: form.email.trim(),
-        customer_phone: form.phone.trim(),
-        shipping_address: shippingAddress,
-        item_id: isUuid(it.id) ? it.id : null,
-        variant_id: it.variantId ?? null,
-        item_name: it.name,
-        quantity: it.quantity,
-        total_price_egp: it.price_egp * it.quantity,
-        user_id: user?.id ?? null,
-      }));
-      const { error: insertError } = await supabase.from("orders").insert(rows);
-      if (insertError) throw new Error("Could not save order items: " + insertError.message);
-
-      if (submittedAppliedOffers.length > 0) {
-        await incrementOfferUses(submittedAppliedOffers.map((applied) => applied.offer.id));
-      }
+      const { data: orderIdData, error: placeOrderError } = await supabase.rpc("place_order", {
+        p_order: orderPayload,
+      });
+      if (placeOrderError) throw new Error("Could not place order: " + placeOrderError.message);
+      const orderId = orderIdData as string;
 
       if (user && savePrefs) {
         await upsertProfile({

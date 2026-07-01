@@ -23,6 +23,7 @@ export type Offer = {
   max_uses: number | null;
   uses_count: number | null;
   duration_hours: number | null;
+  created_at?: string | null;
 };
 
 export type AppliedOffer = {
@@ -51,6 +52,7 @@ const normalizeCode = (code: string | null | undefined) => (code ?? "").trim().t
 const normalizeCopy = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 const money = (value: number) => Math.max(0, Math.round(value));
 const timeValue = (value: string | null) => (value ? new Date(value).getTime() : null);
+const isTimedSale = (offer: Offer) => offer.offer_type === "timed_sale";
 
 export async function fetchOffers(): Promise<Offer[]> {
   const { data, error } = await supabase.from("offers").select("*");
@@ -81,18 +83,16 @@ export function isActiveOffer(offer: Offer, now = Date.now()) {
 
 export function durationEndTime(offer: Offer): number | null {
   if (offer.duration_hours === null || offer.duration_hours === undefined) return null;
-  const startsAt = timeValue(offer.start_date);
+  const startsAt =
+    timeValue(offer.start_date) ??
+    (isTimedSale(offer) ? timeValue(offer.created_at ?? null) : null);
   if (startsAt === null) return null;
   return startsAt + offer.duration_hours * 60 * 60 * 1000;
 }
 
 export function isDurationStillValid(offer: Offer, now = Date.now()) {
-  if (
-    offer.duration_hours !== null &&
-    offer.duration_hours !== undefined &&
-    offer.start_date === null
-  )
-    return false;
+  const hasDuration = offer.duration_hours !== null && offer.duration_hours !== undefined;
+  if (hasDuration && durationEndTime(offer) === null) return false;
   const endsAt = durationEndTime(offer);
   return endsAt === null || endsAt > now;
 }
@@ -289,11 +289,4 @@ export function calculateOfferTotals(
     discountTotal,
     total: money(runningSubtotal + shippingFee),
   };
-}
-
-export async function incrementOfferUses(offerIds: string[]) {
-  const ids = Array.from(new Set(offerIds)).filter(Boolean);
-  if (!ids.length) return;
-  const { error } = await supabase.rpc("increment_offer_uses", { offer_ids: ids });
-  if (error) throw new Error("Could not update offer usage: " + error.message);
 }
