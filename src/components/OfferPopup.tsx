@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { fetchActivePopupOffer, type Offer } from "@/lib/offer";
+import { fetchActivePopupOffer, getOfferCopy, type Offer } from "@/lib/offer";
 import { useAuth } from "@/lib/auth";
 import { JABAL_LOGO_URL } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n";
@@ -9,7 +9,7 @@ const KEY = "jabal_offer_popup_dismissed";
 
 export function OfferPopup() {
   const { user, loading } = useAuth();
-  const { t } = useI18n();
+  const { lang, t } = useI18n();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -43,6 +43,8 @@ export function OfferPopup() {
   };
 
   if (!open || !offer) return null;
+
+  const copy = getOfferCopy(offer, lang);
 
   return (
     <div
@@ -108,11 +110,11 @@ export function OfferPopup() {
             {t("offer.exclusive")}
           </div>
           <h2 style={{ fontSize: 22, fontWeight: 400, letterSpacing: "-0.01em", lineHeight: 1.25 }}>
-            {offer.title}
+            {copy.title}
           </h2>
-          {offer.description && (
+          {copy.description && (
             <p style={{ fontSize: 13, color: "#9a9a9a", marginTop: 12, lineHeight: 1.6 }}>
-              {offer.description}
+              {copy.description}
             </p>
           )}
         </div>

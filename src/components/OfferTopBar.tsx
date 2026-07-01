@@ -4,7 +4,9 @@ import type { User } from "@supabase/supabase-js";
 import {
   fetchOffers,
   getActiveOffers,
+  getOfferCopy,
   getFirstOrderEligible,
+  requiresLoggedInAccount,
   durationEndTime,
   type Offer,
 } from "@/lib/offer";
@@ -53,10 +55,11 @@ export function OfferTopBar({ user }: Props) {
 
   const visibleOffers = useMemo(
     () =>
-      getActiveOffers(offers, now).filter(
-        (candidate) => !candidate.first_order_only || firstOrderEligible,
-      ),
-    [offers, firstOrderEligible, now],
+      getActiveOffers(offers, now).filter((candidate) => {
+        if (requiresLoggedInAccount(candidate)) return !user || firstOrderEligible;
+        return !candidate.first_order_only || firstOrderEligible;
+      }),
+    [offers, firstOrderEligible, now, user],
   );
 
   useEffect(() => {
@@ -123,6 +126,7 @@ export function OfferTopBar({ user }: Props) {
           {visibleOffers.map((visibleOffer, index) => {
             const endsAt = durationEndTime(visibleOffer);
             const remaining = endsAt && endsAt > now ? formatRemaining(endsAt - now) : null;
+            const copy = getOfferCopy(visibleOffer, lang);
 
             return (
               <div
@@ -130,63 +134,109 @@ export function OfferTopBar({ user }: Props) {
                 className="px-4 md:px-10"
                 aria-hidden={index !== activeIndex}
                 style={{
-                  minHeight: visibleOffers.length > 1 ? 58 : 44,
+                  minHeight: visibleOffers.length > 1 ? 82 : 74,
                   flex: "0 0 100%",
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 14,
-                  flexWrap: "wrap",
+                  gap: 8,
                   textAlign: "center",
-                  fontSize: 11,
-                  letterSpacing: lang === "ar" ? 0 : "0.1em",
-                  textTransform: "uppercase",
+                  fontSize: 13,
                   lineHeight: 1.4,
-                  paddingTop: 9,
-                  paddingBottom: visibleOffers.length > 1 ? 4 : 9,
+                  paddingTop: 13,
+                  paddingBottom: visibleOffers.length > 1 ? 7 : 13,
                   direction: dir,
                 }}
               >
-                {visibleOffers.length > 1 && (
-                  <span
-                    style={{ color: "#555", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}
-                  >
-                    {index + 1}/{visibleOffers.length}
-                  </span>
-                )}
-                <span style={{ fontWeight: 700 }}>{visibleOffer.title}</span>
-                {visibleOffer.description && (
-                  <span
-                    style={{
-                      color: "#333",
-                      letterSpacing: lang === "ar" ? 0 : "0.04em",
-                      textTransform: "none",
-                    }}
-                  >
-                    {visibleOffer.description}
-                  </span>
-                )}
-                {visibleOffer.code && (
-                  <span style={{ border: "1px solid #000", padding: "3px 8px", fontWeight: 700 }}>
-                    {t("offer.code")} {visibleOffer.code}
-                  </span>
-                )}
-                {remaining && (
-                  <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
-                    {t("offer.ends")} {remaining}
-                  </span>
-                )}
-                <Link
-                  to="/shop"
+                <div
                   style={{
-                    color: "#000",
-                    textDecoration: "underline",
-                    textUnderlineOffset: 3,
-                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    width: "100%",
+                    minWidth: 0,
                   }}
                 >
-                  {t("offer.shop")}
-                </Link>
+                  {visibleOffers.length > 1 && (
+                    <span
+                      style={{
+                        color: "#555",
+                        fontVariantNumeric: "tabular-nums",
+                        fontWeight: 700,
+                        fontSize: 11,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {index + 1}/{visibleOffers.length}
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      fontWeight: 800,
+                      letterSpacing: lang === "ar" ? 0 : "0.14em",
+                      textTransform: "uppercase",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {copy.title}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 16,
+                    flexWrap: "wrap",
+                    width: "100%",
+                    minWidth: 0,
+                    color: "#333",
+                    letterSpacing: lang === "ar" ? 0 : "0.04em",
+                    textTransform: "none",
+                  }}
+                >
+                  {copy.description && (
+                    <span style={{ maxWidth: 720, overflowWrap: "anywhere" }}>
+                      {copy.description}
+                    </span>
+                  )}
+                  {visibleOffer.code && (
+                    <span
+                      style={{
+                        border: "1px solid #000",
+                        padding: "3px 8px",
+                        fontWeight: 700,
+                        color: "#000",
+                      }}
+                    >
+                      {t("offer.code")} {visibleOffer.code}
+                    </span>
+                  )}
+                  {remaining && (
+                    <span
+                      style={{ fontVariantNumeric: "tabular-nums", fontWeight: 700, color: "#000" }}
+                    >
+                      {t("offer.ends")} {remaining}
+                    </span>
+                  )}
+                  <Link
+                    to="/shop"
+                    style={{
+                      color: "#000",
+                      textDecoration: "underline",
+                      textUnderlineOffset: 3,
+                      fontWeight: 800,
+                      letterSpacing: lang === "ar" ? 0 : "0.16em",
+                      textTransform: "uppercase",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {t("offer.shop")}
+                  </Link>
+                </div>
               </div>
             );
           })}
@@ -208,7 +258,7 @@ export function OfferTopBar({ user }: Props) {
             <button
               key={visibleOffer.id}
               type="button"
-              aria-label={`${t("offer.show")} ${index + 1}: ${visibleOffer.title}`}
+              aria-label={`${t("offer.show")} ${index + 1}: ${getOfferCopy(visibleOffer, lang).title}`}
               onClick={() => goTo(index)}
               style={{
                 width: index === activeIndex ? 14 : 6,

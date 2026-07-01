@@ -18,6 +18,7 @@ import {
   fetchOffers,
   findMatchingCodeOffer,
   getFirstOrderEligible,
+  getOfferCopy,
   incrementOfferUses,
   type Offer,
 } from "@/lib/offer";
@@ -313,7 +314,7 @@ function CartPage() {
             subtotal,
             discount: submittedTotals.discountTotal,
             discounts: submittedAppliedOffers.map((applied) => ({
-              title: applied.offer.title,
+              title: getOfferCopy(applied.offer, lang).title,
               amount: applied.savedEgp,
             })),
             shipping_fee: submittedTotals.shippingFee,
@@ -660,7 +661,7 @@ function CartPage() {
             {appliedOffers.map((applied) => (
               <AppliedOfferLine
                 key={applied.offer.id}
-                title={applied.offer.title}
+                title={getOfferCopy(applied.offer, lang).title}
                 amount={applied.savedEgp}
               />
             ))}

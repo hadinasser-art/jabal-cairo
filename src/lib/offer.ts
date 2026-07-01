@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import type { Lang } from "./i18n";
 import { supabase } from "./supabase";
 
 export type DiscountType = "percentage" | "fixed" | "free_shipping";
@@ -6,7 +7,9 @@ export type DiscountType = "percentage" | "fixed" | "free_shipping";
 export type Offer = {
   id: string;
   title: string;
+  title_ar?: string | null;
   description: string | null;
+  description_ar?: string | null;
   discount_type: DiscountType | string | null;
   discount_value: number | null;
   first_order_only: boolean | null;
@@ -45,6 +48,7 @@ export type OfferEligibilityOptions = {
 };
 
 const normalizeCode = (code: string | null | undefined) => (code ?? "").trim().toLowerCase();
+const normalizeCopy = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 const money = (value: number) => Math.max(0, Math.round(value));
 const timeValue = (value: string | null) => (value ? new Date(value).getTime() : null);
 
@@ -150,8 +154,8 @@ export function findMatchingCodeOffer(offers: Offer[], enteredCode: string, now 
 }
 
 export function requiresLoggedInAccount(offer: Offer) {
-  const title = (offer.title ?? "").toLowerCase();
-  const description = (offer.description ?? "").toLowerCase();
+  const title = normalizeCopy(offer.title);
+  const description = normalizeCopy(offer.description);
   const accountCopy = `${title} ${description}`;
   return (
     offer.discount_type === "percentage" &&
@@ -160,6 +164,68 @@ export function requiresLoggedInAccount(offer: Offer) {
       accountCopy.includes("sign up") ||
       accountCopy.includes("signup") ||
       offer.first_order_only === true)
+  );
+}
+
+function getGeneratedArabicOfferCopy(offer: Offer) {
+  const copy = `${normalizeCopy(offer.title)} ${normalizeCopy(offer.description)}`;
+
+  if (requiresLoggedInAccount(offer)) {
+    return {
+      title: "أنشئ حساباً واحصل على خصم 15٪ على أول قطعة",
+      description: "العملاء الجدد يحصلون على خصم 15٪ على أول قطعة عند إنشاء حساب.",
+    };
+  }
+
+  if (offer.discount_type === "free_shipping" || copy.includes("free shipping")) {
+    return {
+      title: "شحن مجاني",
+      description: offer.minimum_order_egp
+        ? `شحن مجاني للطلبات من ${money(offer.minimum_order_egp).toLocaleString("en-US")} جنيه.`
+        : "استمتع بشحن مجاني على طلبك.",
+    };
+  }
+
+  if (offer.discount_type === "percentage" && offer.discount_value !== null) {
+    return {
+      title: `خصم ${money(offer.discount_value)}٪`,
+      description: offer.minimum_order_egp
+        ? `يسري على الطلبات من ${money(offer.minimum_order_egp).toLocaleString("en-US")} جنيه.`
+        : "يسري على المنتجات المؤهلة.",
+    };
+  }
+
+  if (offer.discount_type === "fixed" && offer.discount_value !== null) {
+    return {
+      title: `خصم ${money(offer.discount_value).toLocaleString("en-US")} جنيه`,
+      description: offer.minimum_order_egp
+        ? `يسري على الطلبات من ${money(offer.minimum_order_egp).toLocaleString("en-US")} جنيه.`
+        : "يسري على المنتجات المؤهلة.",
+    };
+  }
+
+  return null;
+}
+
+export function getOfferCopy(offer: Offer, lang: Lang) {
+  if (lang !== "ar") {
+    return { title: offer.title, description: offer.description };
+  }
+
+  const dbTitle = offer.title_ar?.trim();
+  const dbDescription = offer.description_ar?.trim();
+  if (dbTitle || dbDescription) {
+    return {
+      title: dbTitle || offer.title,
+      description: dbDescription || offer.description,
+    };
+  }
+
+  return (
+    getGeneratedArabicOfferCopy(offer) ?? {
+      title: offer.title,
+      description: offer.description,
+    }
   );
 }
 
@@ -177,6 +243,7 @@ export function calculateOfferTotals(
 
   for (const offer of getActiveOffers(offers, now)) {
     if (requiresLoggedInAccount(offer) && !options.user) continue;
+    if (requiresLoggedInAccount(offer) && !options.firstOrderEligible) continue;
     if (offer.first_order_only && !options.firstOrderEligible) continue;
 
     const offerCode = normalizeCode(offer.code);
