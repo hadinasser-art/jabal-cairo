@@ -298,6 +298,68 @@
   color: #fff;
 }
 
+.pdp-gallery {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.pdp-gallery-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.38s ease;
+  will-change: transform;
+}
+.pdp-gallery-slide {
+  min-width: 100%;
+  height: 100%;
+  background: var(--jb-product-bg);
+}
+.pdp-gallery-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: rgba(0, 0, 0, 0.42);
+  color: #fff;
+  transform: translateY(-50%);
+  font-size: 30px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pdp-gallery-arrow-left {
+  left: 18px;
+}
+.pdp-gallery-arrow-right {
+  right: 18px;
+}
+.pdp-gallery-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.pdp-gallery-dots button {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  border: 1px solid #fff;
+  background: transparent;
+  padding: 0;
+}
+.pdp-gallery-dots button.is-active {
+  background: #fff;
+}
+
 .jabal-nav {
   min-width: 0;
 }

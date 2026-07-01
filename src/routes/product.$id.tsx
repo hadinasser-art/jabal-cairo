@@ -18,6 +18,7 @@ import { fetchOffers, type Offer } from "@/lib/offer";
 import { FavoriteButton } from "@/components/FavoriteButton";
 
 const SHORTS_PRODUCT_ID = "e13c0513-522d-4133-af02-2c6f0c33e9ce";
+const OVERSIZED_TSHIRT_PRODUCT_ID = "c5d77496-59d1-4dc5-baf0-1d6f34352ea9";
 const SHORTS_SIZE_CHART_URL =
   "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/short%20measurements.jpg";
 const WIDE_LEG_SIZE_CHART_URL =
@@ -29,6 +30,26 @@ const SHORTS_COLOR_IMAGES: Record<string, string> = {
   Sage: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/sage.jpg",
   "Steel Blue":
     "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/Steel%20Blue.jpg",
+};
+const OVERSIZED_TSHIRT_GALLERY_IMAGES: Record<string, { label: string; url: string }[]> = {
+  Orange: [
+    {
+      label: "Front",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/front.png",
+    },
+    {
+      label: "Side",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/side.png",
+    },
+    {
+      label: "Back",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/back.png",
+    },
+    {
+      label: "Fit",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/3%3A4.png",
+    },
+  ],
 };
 
 export const Route = createFileRoute("/product/$id")({
@@ -43,7 +64,37 @@ function getVariantImage(item: Item, selectedColor: string | null) {
 }
 
 function hasImageVariants(item: Item) {
-  return item.id === SHORTS_PRODUCT_ID;
+  return item.id === SHORTS_PRODUCT_ID || item.id === OVERSIZED_TSHIRT_PRODUCT_ID;
+}
+
+function uniqueGalleryImages(images: { label: string; url: string }[]) {
+  const seen = new Set<string>();
+  return images.filter((image) => {
+    if (!image.url || seen.has(image.url)) return false;
+    seen.add(image.url);
+    return true;
+  });
+}
+
+function getGalleryImages(
+  item: Item,
+  selectedColor: string | null,
+  selectedImage: string | null,
+  variants: ProductVariant[],
+) {
+  if (item.id === OVERSIZED_TSHIRT_PRODUCT_ID && selectedColor) {
+    return uniqueGalleryImages([
+      ...(OVERSIZED_TSHIRT_GALLERY_IMAGES[selectedColor] ?? []),
+      ...(selectedImage ? [{ label: selectedColor, url: selectedImage }] : []),
+    ]);
+  }
+
+  return uniqueGalleryImages([
+    ...(selectedImage ? [{ label: selectedColor || "Main", url: selectedImage }] : []),
+    ...variants
+      .filter((variant) => !selectedColor || variant.color === selectedColor)
+      .map((variant) => ({ label: variant.size, url: variant.image_url || "" })),
+  ]);
 }
 
 function getSizeChartUrl(item: Item) {
@@ -67,10 +118,16 @@ function ProductPage() {
   const [qty, setQty] = useState(1);
   const [warning, setWarning] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [galleryTouchStart, setGalleryTouchStart] = useState<number | null>(null);
 
   useEffect(() => {
     fetchOffers().then(setOffers);
   }, []);
+
+  useEffect(() => {
+    setGalleryIndex(0);
+  }, [id, color]);
 
   useEffect(() => {
     setItem(null);
@@ -185,10 +242,32 @@ function ProductPage() {
     : null;
   const selectedImage =
     selectedVariant?.image_url || selectedColorImage || getVariantImage(item, color);
+  const galleryImages = getGalleryImages(item, color, selectedImage, variants);
+  const activeGalleryImage = galleryImages[galleryIndex]?.url || selectedImage;
   const imageVariantProduct =
     hasImageVariants(item) || variants.some((variant) => Boolean(variant.image_url));
   const sizeChartUrl = getSizeChartUrl(item);
   const maxQty = Math.max(1, selectedStock);
+
+  const goToPreviousGalleryImage = () => {
+    if (galleryImages.length < 2) return;
+    setGalleryIndex((current) => (current === 0 ? galleryImages.length - 1 : current - 1));
+  };
+
+  const goToNextGalleryImage = () => {
+    if (galleryImages.length < 2) return;
+    setGalleryIndex((current) => (current === galleryImages.length - 1 ? 0 : current + 1));
+  };
+
+  const handleGalleryTouchEnd = (clientX: number) => {
+    if (galleryTouchStart === null || galleryImages.length < 2) return;
+    const distance = galleryTouchStart - clientX;
+    if (Math.abs(distance) > 40) {
+      if (distance > 0) goToNextGalleryImage();
+      else goToPreviousGalleryImage();
+    }
+    setGalleryTouchStart(null);
+  };
 
   const handleAdd = () => {
     setWarning(null);
@@ -245,14 +324,60 @@ function ProductPage() {
       </div>
 
       <div className="grid lg:grid-cols-[60%_40%] gap-0 max-w-[1600px] mx-auto mt-6">
-        <div style={{ background: "#141414" }} className="relative">
-          {selectedImage ? (
-            <img
-              key={selectedImage}
-              src={selectedImage}
-              alt={[item.name, color].filter(Boolean).join(" - ")}
-              className="w-full h-full object-cover aspect-[3/4] lg:aspect-auto lg:min-h-[80vh]"
-            />
+        <div style={{ background: "#141414" }} className="relative overflow-hidden">
+          {activeGalleryImage ? (
+            <div className="pdp-gallery" aria-label={`${item.name} images`}>
+              <div
+                className="pdp-gallery-track"
+                style={{ transform: `translateX(-${galleryIndex * 100}%)` }}
+                onTouchStart={(event) => setGalleryTouchStart(event.touches[0]?.clientX ?? null)}
+                onTouchEnd={(event) => handleGalleryTouchEnd(event.changedTouches[0]?.clientX ?? 0)}
+              >
+                {(galleryImages.length > 0
+                  ? galleryImages
+                  : [{ label: "Main", url: activeGalleryImage }]
+                ).map((image) => (
+                  <div className="pdp-gallery-slide" key={image.url}>
+                    <img
+                      src={image.url}
+                      alt={[item.name, color, image.label].filter(Boolean).join(" - ")}
+                      className="w-full h-full object-cover aspect-[3/4] lg:aspect-auto lg:min-h-[80vh]"
+                    />
+                  </div>
+                ))}
+              </div>
+              {galleryImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    className="pdp-gallery-arrow pdp-gallery-arrow-left"
+                    onClick={goToPreviousGalleryImage}
+                    aria-label="Previous image"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    className="pdp-gallery-arrow pdp-gallery-arrow-right"
+                    onClick={goToNextGalleryImage}
+                    aria-label="Next image"
+                  >
+                    ›
+                  </button>
+                  <div className="pdp-gallery-dots">
+                    {galleryImages.map((image, index) => (
+                      <button
+                        key={image.url}
+                        type="button"
+                        className={index === galleryIndex ? "is-active" : ""}
+                        onClick={() => setGalleryIndex(index)}
+                        aria-label={`Show ${image.label}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
             <div className="aspect-[3/4]" style={{ background: "#141414" }} />
           )}
