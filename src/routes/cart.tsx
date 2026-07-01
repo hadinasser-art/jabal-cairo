@@ -270,6 +270,7 @@ function CartPage() {
         offer_id: submittedAppliedOffers[0]?.offer.id ?? null,
         discount_amount_egp: submittedTotals.discountTotal,
         applied_offer_ids: submittedAppliedOffers.map((applied) => applied.offer.id),
+        promo_code: enteredCode || null,
         items: orderItems,
       };
 

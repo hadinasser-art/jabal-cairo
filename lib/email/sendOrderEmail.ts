@@ -55,13 +55,6 @@ export async function sendOrderEmail(
 
     if (logError) throw logError;
 
-    if (emailType === "abandoned_checkout") {
-      await supabase
-        .from("orders")
-        .update({ abandoned_email_sent_at: new Date().toISOString() })
-        .eq("id", order.id);
-    }
-
     return { status: "sent", emailType, orderId: order.id };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown email error";

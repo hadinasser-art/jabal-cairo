@@ -10,6 +10,7 @@ export type EmailType =
 
 export type EmailOrder = {
   id: string;
+  order_number: string;
   customer_email: string;
   customer_name: string | null;
   order_status: string | null;
@@ -38,7 +39,7 @@ function money(order: EmailOrder) {
 
 function orderUrl(order: EmailOrder) {
   const baseUrl = getEnv("NEXT_PUBLIC_SITE_URL") || "";
-  return `${baseUrl.replace(/\/$/, "")}/account?order=${encodeURIComponent(order.id)}`;
+  return `${baseUrl.replace(/\/$/, "")}/account?order=${encodeURIComponent(order.order_number)}`;
 }
 
 function getTemplateContent(type: EmailType, order: EmailOrder): TemplateContent {
@@ -46,24 +47,24 @@ function getTemplateContent(type: EmailType, order: EmailOrder): TemplateContent
 
   const templates: Record<EmailType, TemplateContent> = {
     order_received: {
-      subject: `JABAL received your order ${order.id}`,
+      subject: `JABAL received your order ${order.order_number}`,
       preview: "Your order has been received.",
       headline: "Order received",
       body: `We received your order and will review it shortly. Your current order total is ${total}.`,
       ctaLabel: "View order",
     },
     order_confirmed: {
-      subject: `JABAL confirmed your order ${order.id}`,
+      subject: `JABAL confirmed your order ${order.order_number}`,
       preview: "Your order is confirmed.",
       headline: "Order confirmed",
       body: `Your order is confirmed and being prepared. Your confirmed total is ${total}.`,
       ctaLabel: "View order",
     },
     payment_received: {
-      subject: `Payment received for ${order.id}`,
+      subject: `Payment received for ${order.order_number}`,
       preview: "Your payment has been received.",
       headline: "Payment received",
-      body: `We received your payment for order ${order.id}. Paid total: ${total}.`,
+      body: `We received your payment for order ${order.order_number}. Paid total: ${total}.`,
       ctaLabel: "View order",
     },
     out_for_delivery: {
@@ -124,7 +125,7 @@ export function renderOrderEmail(type: EmailType, order: EmailOrder) {
             </tr>
             <tr>
               <td style="padding:32px 28px;">
-                <div style="font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#9a9a9a;">Order ${order.id}</div>
+                <div style="font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#9a9a9a;">Order ${order.order_number}</div>
                 <h1 style="margin:12px 0 0;font-size:28px;line-height:1.2;font-weight:400;color:#fff;">${content.headline}</h1>
                 <p style="margin:22px 0 0;font-size:15px;line-height:1.7;color:#d8d8d8;">Hi ${customerName},</p>
                 <p style="margin:10px 0 0;font-size:15px;line-height:1.7;color:#d8d8d8;">${content.body}</p>
