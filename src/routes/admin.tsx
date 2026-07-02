@@ -28,6 +28,25 @@ type AdminOrderRow = {
   created_at: string | null;
 };
 
+type AdminInventoryItem = {
+  id: string;
+  name: string;
+  gender: string | null;
+  stock_quantity: number | null;
+  sold_out: boolean | null;
+};
+
+type AdminInventoryRow = {
+  id: string;
+  item_id: string;
+  color: string;
+  size: string;
+  stock_quantity: number;
+  sku: string | null;
+  updated_at: string | null;
+  item: AdminInventoryItem | AdminInventoryItem[] | null;
+};
+
 type OrderDraft = {
   status: string;
   tracking_number: string;
@@ -41,8 +60,11 @@ function AdminPage() {
   const navigate = useNavigate();
   const [revenue, setRevenue] = useState<RevenueRow[]>([]);
   const [orders, setOrders] = useState<AdminOrderRow[]>([]);
+  const [inventory, setInventory] = useState<AdminInventoryRow[]>([]);
   const [orderDrafts, setOrderDrafts] = useState<Record<string, OrderDraft>>({});
+  const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
+  const [savingVariantId, setSavingVariantId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +73,7 @@ function AdminPage() {
     setError(null);
     if (clearNotice) setNotice(null);
     setLoadingData(true);
-    const [revenueResult, ordersResult] = await Promise.all([
+    const [revenueResult, ordersResult, inventoryResult] = await Promise.all([
       supabase
         .from("revenue")
         .select("month_start,total_revenue_egp,paid_order_count")
@@ -63,17 +85,31 @@ function AdminPage() {
         )
         .order("created_at", { ascending: false })
         .limit(12),
+      supabase
+        .from("product_variants")
+        .select(
+          "id,item_id,color,size,stock_quantity,sku,updated_at,item:items(id,name,gender,stock_quantity,sold_out)",
+        )
+        .order("color", { ascending: true })
+        .order("size", { ascending: true }),
     ]);
     setLoadingData(false);
 
-    if (revenueResult.error || ordersResult.error) {
-      setError(revenueResult.error?.message || ordersResult.error?.message || "Admin data failed");
+    if (revenueResult.error || ordersResult.error || inventoryResult.error) {
+      setError(
+        revenueResult.error?.message ||
+          ordersResult.error?.message ||
+          inventoryResult.error?.message ||
+          "Admin data failed",
+      );
       return;
     }
 
     setRevenue((revenueResult.data as RevenueRow[]) || []);
     const nextOrders = (ordersResult.data as AdminOrderRow[]) || [];
+    const nextInventory = sortInventory((inventoryResult.data as AdminInventoryRow[]) || []);
     setOrders(nextOrders);
+    setInventory(nextInventory);
     setOrderDrafts(
       Object.fromEntries(
         nextOrders.map((order) => [
@@ -84,6 +120,11 @@ function AdminPage() {
             payment_reference: order.payment_reference ?? "",
           },
         ]),
+      ),
+    );
+    setStockDrafts(
+      Object.fromEntries(
+        nextInventory.map((variant) => [variant.id, String(variant.stock_quantity ?? 0)]),
       ),
     );
   };
@@ -124,6 +165,31 @@ function AdminPage() {
     setNotice(`${orderId} updated`);
   };
 
+  const saveStock = async (variantId: string) => {
+    const nextStock = Number(stockDrafts[variantId]);
+    if (!Number.isInteger(nextStock) || nextStock < 0) {
+      setError("Stock must be a whole number, zero or more");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setSavingVariantId(variantId);
+    const { error: updateError } = await supabase.rpc("admin_update_variant_stock", {
+      p_variant_id: variantId,
+      p_stock_quantity: nextStock,
+    });
+    setSavingVariantId(null);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    await loadAdminData(false);
+    setNotice("Stock updated");
+  };
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -141,9 +207,16 @@ function AdminPage() {
     const bestMonth = [...revenue].sort(
       (a, b) => Number(b.total_revenue_egp || 0) - Number(a.total_revenue_egp || 0),
     )[0];
+    const totalStock = inventory.reduce(
+      (sum, variant) => sum + Number(variant.stock_quantity || 0),
+      0,
+    );
+    const lowStock = inventory.filter(
+      (variant) => variant.stock_quantity > 0 && variant.stock_quantity <= 3,
+    );
 
-    return { totalRevenue, paidOrders, currentMonth, bestMonth };
-  }, [revenue]);
+    return { totalRevenue, paidOrders, currentMonth, bestMonth, totalStock, lowStock };
+  }, [revenue, inventory]);
 
   if (loading || adminLoading) {
     return (
@@ -185,7 +258,10 @@ function AdminPage() {
             <h1 style={pageTitle}>Dashboard</h1>
             <div style={mutedText}>{user.email}</div>
           </div>
-          <button className="jb-btn-ghost inline-flex items-center gap-2" onClick={loadAdminData}>
+          <button
+            className="jb-btn-ghost inline-flex items-center gap-2"
+            onClick={() => loadAdminData()}
+          >
             <RefreshCw size={15} aria-hidden="true" />
             {loadingData ? "Refreshing" : "Refresh"}
           </button>
@@ -233,6 +309,8 @@ function AdminPage() {
                 : "—"
             }
           />
+          <Metric label="Stock units" value={String(summary.totalStock)} />
+          <Metric label="Low stock" value={String(summary.lowStock.length)} />
         </section>
 
         <section className="grid xl:grid-cols-[1.1fr_0.9fr] gap-8 mt-10">
@@ -361,6 +439,82 @@ function AdminPage() {
             </div>
           </div>
         </section>
+
+        <section className="mt-10">
+          <SectionHeader eyebrow="Inventory" title="Manage stock" />
+          <div style={tableWrap}>
+            <table style={inventoryTableStyle}>
+              <thead>
+                <tr>
+                  <Th>Product</Th>
+                  <Th>Color</Th>
+                  <Th>Size</Th>
+                  <Th>SKU</Th>
+                  <Th align="right">Product total</Th>
+                  <Th align="right">Stock</Th>
+                  <Th align="right">Save</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventory.map((variant) => {
+                  const product = productFromVariant(variant);
+                  const draft = stockDrafts[variant.id] ?? String(variant.stock_quantity ?? 0);
+                  const changed = draft !== String(variant.stock_quantity ?? 0);
+                  return (
+                    <tr key={variant.id} style={rowLine}>
+                      <Td>
+                        <div style={{ color: "#fff" }}>{product?.name || "Product"}</div>
+                        <div style={{ ...mutedText, marginTop: 3 }}>
+                          {product?.gender || "unisex"} · {product?.sold_out ? "Sold out" : "Live"}
+                        </div>
+                      </Td>
+                      <Td>{variant.color}</Td>
+                      <Td>{variant.size}</Td>
+                      <Td>{variant.sku || "—"}</Td>
+                      <Td align="right">{product?.stock_quantity ?? 0}</Td>
+                      <Td align="right">
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={draft}
+                          onChange={(event) =>
+                            setStockDrafts((current) => ({
+                              ...current,
+                              [variant.id]: event.target.value,
+                            }))
+                          }
+                          style={{ ...controlStyle, minWidth: 90, textAlign: "right" }}
+                          aria-label={`Stock for ${product?.name || "product"} ${variant.color} ${variant.size}`}
+                        />
+                      </Td>
+                      <Td align="right">
+                        <button
+                          className="jb-btn-ghost inline-flex items-center justify-center"
+                          onClick={() => saveStock(variant.id)}
+                          disabled={!changed || savingVariantId === variant.id}
+                          style={{
+                            minHeight: 34,
+                            padding: "0 10px",
+                            opacity: !changed ? 0.5 : 1,
+                          }}
+                          aria-label={`Save stock for ${variant.color} ${variant.size}`}
+                        >
+                          <Save size={14} aria-hidden="true" />
+                        </button>
+                      </Td>
+                    </tr>
+                  );
+                })}
+                {inventory.length === 0 && (
+                  <tr>
+                    <Td colSpan={7}>No inventory yet</Td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </AdminShell>
     </Layout>
   );
@@ -421,6 +575,28 @@ function dateLabel(value: string | null) {
   );
 }
 
+function productFromVariant(variant: AdminInventoryRow) {
+  return Array.isArray(variant.item) ? variant.item[0] : variant.item;
+}
+
+function sortInventory(rows: AdminInventoryRow[]) {
+  return [...rows].sort((a, b) => {
+    const productCompare = (productFromVariant(a)?.name || "").localeCompare(
+      productFromVariant(b)?.name || "",
+    );
+    if (productCompare !== 0) return productCompare;
+    const colorCompare = a.color.localeCompare(b.color);
+    if (colorCompare !== 0) return colorCompare;
+    return sizeSortValue(a.size) - sizeSortValue(b.size) || a.size.localeCompare(b.size);
+  });
+}
+
+function sizeSortValue(size: string) {
+  const order = ["S", "M", "L", "XL", "XXL"];
+  const index = order.indexOf(size.trim().toUpperCase());
+  return index === -1 ? order.length : index;
+}
+
 const pageTitle = {
   color: "#fff",
   fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
@@ -442,6 +618,12 @@ const tableStyle = {
   width: "100%",
   borderCollapse: "collapse" as const,
   minWidth: 880,
+};
+
+const inventoryTableStyle = {
+  width: "100%",
+  borderCollapse: "collapse" as const,
+  minWidth: 980,
 };
 
 const cellBase = {
