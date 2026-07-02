@@ -337,7 +337,132 @@ function AdminPage() {
           <Metric label="Low stock" value={String(summary.lowStock.length)} />
         </section>
 
-        <section className="grid xl:grid-cols-[1.1fr_0.9fr] gap-8 mt-10">
+        <section className="mt-10" style={primarySectionStyle}>
+          <SectionHeader eyebrow="Orders" title="Order management" />
+          <div style={filterBarStyle} aria-label="Filter orders by status">
+            {ORDER_STATUS_FILTERS.map((status) => {
+              const active = orderStatusFilter === status;
+              const count = status === "all" ? orders.length : (summary.orderCounts[status] ?? 0);
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setOrderStatusFilter(status)}
+                  style={{
+                    ...filterButtonStyle,
+                    borderColor: active ? "#fff" : "#333",
+                    background: active ? "#fff" : "#050505",
+                    color: active ? "#000" : "#fff",
+                  }}
+                >
+                  {status} ({count})
+                </button>
+              );
+            })}
+          </div>
+          <div style={tableWrap}>
+            <table style={orderTableStyle}>
+              <thead>
+                <tr>
+                  <Th>Order</Th>
+                  <Th>Status</Th>
+                  <Th>Tracking</Th>
+                  <Th>Payment ref</Th>
+                  <Th align="right">Total</Th>
+                  <Th align="right">Save</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.filteredOrders.map((order) => {
+                  const draft = orderDrafts[order.order_id] ?? {
+                    status: order.status,
+                    tracking_number: order.tracking_number ?? "",
+                    payment_reference: order.payment_reference ?? "",
+                  };
+                  const changed =
+                    draft.status !== order.status ||
+                    draft.tracking_number !== (order.tracking_number ?? "") ||
+                    draft.payment_reference !== (order.payment_reference ?? "");
+                  return (
+                    <tr key={order.order_id} style={rowLine}>
+                      <Td>
+                        <div style={{ color: "#fff" }}>{order.order_id}</div>
+                        <div style={{ ...mutedText, marginTop: 3 }}>
+                          {order.customer_name || order.customer_email || "Guest"} ·{" "}
+                          {dateLabel(order.created_at)}
+                        </div>
+                      </Td>
+                      <Td>
+                        <select
+                          value={draft.status}
+                          onChange={(event) =>
+                            changeOrderStatus(order.order_id, event.target.value)
+                          }
+                          disabled={savingOrderId === order.order_id}
+                          style={controlStyle}
+                          aria-label={`Status for ${order.order_id}`}
+                        >
+                          {ORDER_STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </Td>
+                      <Td>
+                        <input
+                          value={draft.tracking_number}
+                          onChange={(event) =>
+                            updateDraft(order.order_id, { tracking_number: event.target.value })
+                          }
+                          placeholder="Tracking"
+                          style={controlStyle}
+                          aria-label={`Tracking number for ${order.order_id}`}
+                        />
+                      </Td>
+                      <Td>
+                        <input
+                          value={draft.payment_reference}
+                          onChange={(event) =>
+                            updateDraft(order.order_id, { payment_reference: event.target.value })
+                          }
+                          placeholder="Reference"
+                          style={controlStyle}
+                          aria-label={`Payment reference for ${order.order_id}`}
+                        />
+                      </Td>
+                      <Td align="right">{formatPrice(Number(order.total_price_egp || 0))}</Td>
+                      <Td align="right">
+                        <button
+                          className="jb-btn-ghost inline-flex items-center justify-center"
+                          onClick={() => saveOrder(order.order_id)}
+                          disabled={!changed || savingOrderId === order.order_id}
+                          style={{
+                            minHeight: 34,
+                            padding: "0 10px",
+                            opacity: !changed ? 0.5 : 1,
+                          }}
+                          aria-label={`Save ${order.order_id}`}
+                        >
+                          <Save size={14} aria-hidden="true" />
+                        </button>
+                      </Td>
+                    </tr>
+                  );
+                })}
+                {summary.filteredOrders.length === 0 && (
+                  <tr>
+                    <Td colSpan={6}>
+                      {orders.length === 0 ? "No orders yet" : "No orders match this status"}
+                    </Td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="mt-10">
           <div>
             <SectionHeader eyebrow="Revenue" title="Monthly revenue" />
             <div style={tableWrap}>
@@ -357,131 +482,6 @@ function AdminPage() {
                       <Td align="right">{row.paid_order_count}</Td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div>
-            <SectionHeader eyebrow="Orders" title="Manage recent orders" />
-            <div style={filterBarStyle} aria-label="Filter orders by status">
-              {ORDER_STATUS_FILTERS.map((status) => {
-                const active = orderStatusFilter === status;
-                const count = status === "all" ? orders.length : (summary.orderCounts[status] ?? 0);
-                return (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => setOrderStatusFilter(status)}
-                    style={{
-                      ...filterButtonStyle,
-                      borderColor: active ? "#fff" : "#333",
-                      background: active ? "#fff" : "#050505",
-                      color: active ? "#000" : "#fff",
-                    }}
-                  >
-                    {status} ({count})
-                  </button>
-                );
-              })}
-            </div>
-            <div style={tableWrap}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    <Th>Order</Th>
-                    <Th>Status</Th>
-                    <Th>Tracking</Th>
-                    <Th>Payment ref</Th>
-                    <Th align="right">Total</Th>
-                    <Th align="right">Save</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.filteredOrders.map((order) => {
-                    const draft = orderDrafts[order.order_id] ?? {
-                      status: order.status,
-                      tracking_number: order.tracking_number ?? "",
-                      payment_reference: order.payment_reference ?? "",
-                    };
-                    const changed =
-                      draft.status !== order.status ||
-                      draft.tracking_number !== (order.tracking_number ?? "") ||
-                      draft.payment_reference !== (order.payment_reference ?? "");
-                    return (
-                      <tr key={order.order_id} style={rowLine}>
-                        <Td>
-                          <div style={{ color: "#fff" }}>{order.order_id}</div>
-                          <div style={{ ...mutedText, marginTop: 3 }}>
-                            {order.customer_name || order.customer_email || "Guest"} ·{" "}
-                            {dateLabel(order.created_at)}
-                          </div>
-                        </Td>
-                        <Td>
-                          <select
-                            value={draft.status}
-                            onChange={(event) =>
-                              changeOrderStatus(order.order_id, event.target.value)
-                            }
-                            disabled={savingOrderId === order.order_id}
-                            style={controlStyle}
-                            aria-label={`Status for ${order.order_id}`}
-                          >
-                            {ORDER_STATUSES.map((status) => (
-                              <option key={status} value={status}>
-                                {status}
-                              </option>
-                            ))}
-                          </select>
-                        </Td>
-                        <Td>
-                          <input
-                            value={draft.tracking_number}
-                            onChange={(event) =>
-                              updateDraft(order.order_id, { tracking_number: event.target.value })
-                            }
-                            placeholder="Tracking"
-                            style={controlStyle}
-                            aria-label={`Tracking number for ${order.order_id}`}
-                          />
-                        </Td>
-                        <Td>
-                          <input
-                            value={draft.payment_reference}
-                            onChange={(event) =>
-                              updateDraft(order.order_id, { payment_reference: event.target.value })
-                            }
-                            placeholder="Reference"
-                            style={controlStyle}
-                            aria-label={`Payment reference for ${order.order_id}`}
-                          />
-                        </Td>
-                        <Td align="right">{formatPrice(Number(order.total_price_egp || 0))}</Td>
-                        <Td align="right">
-                          <button
-                            className="jb-btn-ghost inline-flex items-center justify-center"
-                            onClick={() => saveOrder(order.order_id)}
-                            disabled={!changed || savingOrderId === order.order_id}
-                            style={{
-                              minHeight: 34,
-                              padding: "0 10px",
-                              opacity: !changed ? 0.5 : 1,
-                            }}
-                            aria-label={`Save ${order.order_id}`}
-                          >
-                            <Save size={14} aria-hidden="true" />
-                          </button>
-                        </Td>
-                      </tr>
-                    );
-                  })}
-                  {summary.filteredOrders.length === 0 && (
-                    <tr>
-                      <Td colSpan={6}>
-                        {orders.length === 0 ? "No orders yet" : "No orders match this status"}
-                      </Td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
@@ -662,10 +662,21 @@ const tableWrap = {
   overflowX: "auto" as const,
 };
 
+const primarySectionStyle = {
+  border: "1px solid #262626",
+  padding: 18,
+};
+
 const tableStyle = {
   width: "100%",
   borderCollapse: "collapse" as const,
   minWidth: 880,
+};
+
+const orderTableStyle = {
+  width: "100%",
+  borderCollapse: "collapse" as const,
+  minWidth: 820,
 };
 
 const inventoryTableStyle = {
