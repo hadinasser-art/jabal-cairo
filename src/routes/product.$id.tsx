@@ -36,19 +36,19 @@ const OVERSIZED_TSHIRT_GALLERY_IMAGES: Record<string, { label: string; url: stri
   Orange: [
     {
       label: "Front",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/front.png?v=20260702001751",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/front.png?v=20260702172413",
     },
     {
       label: "Side",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/side.png?v=20260702001751",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/side.png?v=20260702172413",
     },
     {
       label: "Back",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/back.png?v=20260702001751",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/back.png?v=20260702172413",
     },
     {
       label: "Fit",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/3%3A4.png?v=20260702001751",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/3%3A4.png?v=20260702172413",
     },
   ],
   "Baby Blue": [
