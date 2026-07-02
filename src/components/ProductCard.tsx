@@ -5,10 +5,14 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 
 const OVERSIZED_TSHIRT_PRODUCT_ID = "c5d77496-59d1-4dc5-baf0-1d6f34352ea9";
 const OVERSIZED_TSHIRT_COLOR_ORDER = ["Orange", "Navy Blue", "Baby Blue"];
+const OVERSIZED_TSHIRT_CARD_IMAGE_URL =
+  "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/front.png?v=20260702172413";
 
 export function ProductCard({ item }: { item: Item }) {
   const { t } = useI18n();
 
+  const imageUrl =
+    item.id === OVERSIZED_TSHIRT_PRODUCT_ID ? OVERSIZED_TSHIRT_CARD_IMAGE_URL : item.image_url;
   const swatches = sortCardColors(item).slice(0, 4);
   const sizes = sortSizes(item.size || []);
   const soldOut = item.sold_out || item.stock_quantity <= 0;
@@ -17,8 +21,8 @@ export function ProductCard({ item }: { item: Item }) {
     <div className="pc group">
       <Link to="/product/$id" params={{ id: item.id }} style={{ display: "block" }}>
         <div className="pc-img-wrap">
-          {item.image_url ? (
-            <img src={item.image_url} alt={item.name} className="pc-img" loading="lazy" />
+          {imageUrl ? (
+            <img src={imageUrl} alt={item.name} className="pc-img" loading="lazy" />
           ) : (
             <div style={{ width: "100%", height: "100%", background: "#141414" }} />
           )}

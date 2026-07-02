@@ -138,6 +138,14 @@ function getSizeChartUrl(item: Item) {
   return null;
 }
 
+function getInitialColor(item: Item) {
+  if (item.id === SHORTS_PRODUCT_ID) return item.color?.[0] ?? null;
+  if (item.id === OVERSIZED_TSHIRT_PRODUCT_ID) {
+    return OVERSIZED_TSHIRT_COLOR_ORDER.find((color) => item.color?.includes(color)) ?? null;
+  }
+  return item.color && item.color.length === 1 ? item.color[0] : null;
+}
+
 function colorSortValue(itemId: string, color: string) {
   if (itemId !== OVERSIZED_TSHIRT_PRODUCT_ID) return color;
   const index = OVERSIZED_TSHIRT_COLOR_ORDER.indexOf(color);
@@ -200,13 +208,7 @@ function ProductPage() {
           setItem(it);
           if (it) {
             setSize(it.size && it.size.length === 1 ? it.size[0] : null);
-            setColor(
-              it.id === SHORTS_PRODUCT_ID
-                ? (it.color?.[0] ?? null)
-                : it.color && it.color.length === 1
-                  ? it.color[0]
-                  : null,
-            );
+            setColor(getInitialColor(it));
             supabase
               .from("product_variants")
               .select("*")
