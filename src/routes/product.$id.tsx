@@ -120,10 +120,7 @@ function getGalleryImages(
   variants: ProductVariant[],
 ) {
   if (item.id === OVERSIZED_TSHIRT_PRODUCT_ID && selectedColor) {
-    return uniqueGalleryImages([
-      ...(OVERSIZED_TSHIRT_GALLERY_IMAGES[selectedColor] ?? []),
-      ...(selectedImage ? [{ label: selectedColor, url: selectedImage }] : []),
-    ]);
+    return uniqueGalleryImages(OVERSIZED_TSHIRT_GALLERY_IMAGES[selectedColor] ?? []);
   }
 
   return uniqueGalleryImages([
