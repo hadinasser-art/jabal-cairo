@@ -3,10 +3,13 @@ import { useI18n } from "@/lib/i18n";
 import { formatPrice, sortSizes, type Item } from "@/lib/supabase";
 import { FavoriteButton } from "@/components/FavoriteButton";
 
+const OVERSIZED_TSHIRT_PRODUCT_ID = "c5d77496-59d1-4dc5-baf0-1d6f34352ea9";
+const OVERSIZED_TSHIRT_COLOR_ORDER = ["Orange", "Navy Blue", "Baby Blue"];
+
 export function ProductCard({ item }: { item: Item }) {
   const { t } = useI18n();
 
-  const swatches = (item.color || []).slice(0, 4);
+  const swatches = sortCardColors(item).slice(0, 4);
   const sizes = sortSizes(item.size || []);
   const soldOut = item.sold_out || item.stock_quantity <= 0;
 
@@ -65,14 +68,28 @@ export function ProductCard({ item }: { item: Item }) {
   );
 }
 
+function sortCardColors(item: Item) {
+  const colors = item.color || [];
+  if (item.id !== OVERSIZED_TSHIRT_PRODUCT_ID) return colors;
+  return [...colors].sort((a, b) => {
+    const aIndex = OVERSIZED_TSHIRT_COLOR_ORDER.indexOf(a);
+    const bIndex = OVERSIZED_TSHIRT_COLOR_ORDER.indexOf(b);
+    const aSort = aIndex === -1 ? OVERSIZED_TSHIRT_COLOR_ORDER.length : aIndex;
+    const bSort = bIndex === -1 ? OVERSIZED_TSHIRT_COLOR_ORDER.length : bIndex;
+    return aSort - bSort || a.localeCompare(b);
+  });
+}
+
 function swatchColor(name: string): string {
   const n = name.toLowerCase();
   if (n === "black") return "#050505";
   if (n === "gray" || n === "grey") return "#8f8f8f";
   if (n === "sage") return "#727a68";
+  if (n === "orange") return "#f26318";
   if (n === "baby blue") return "#9fc7de";
   if (n === "navy blue") return "#152845";
   if (n === "steel blue") return "#345c92";
+  if (n.includes("orange")) return "#f26318";
   if (n.includes("baby blue")) return "#9fc7de";
   if (n.includes("navy blue")) return "#152845";
   if (n.includes("steel blue")) return "#345c92";
@@ -85,6 +102,7 @@ function swatchColor(name: string): string {
     beige: "#d8c9b0",
     cream: "#f1ead9",
     sand: "#cdb892",
+    orange: "#f26318",
     navy: "#1c2540",
     blue: "#3b5b8c",
     olive: "#6b6a3a",

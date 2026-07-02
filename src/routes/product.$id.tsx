@@ -19,6 +19,7 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 
 const SHORTS_PRODUCT_ID = "e13c0513-522d-4133-af02-2c6f0c33e9ce";
 const OVERSIZED_TSHIRT_PRODUCT_ID = "c5d77496-59d1-4dc5-baf0-1d6f34352ea9";
+const OVERSIZED_TSHIRT_COLOR_ORDER = ["Orange", "Navy Blue", "Baby Blue"];
 const SHORTS_SIZE_CHART_URL =
   "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/short%20measurements.jpg";
 const WIDE_LEG_SIZE_CHART_URL =
@@ -140,6 +141,27 @@ function getSizeChartUrl(item: Item) {
   return null;
 }
 
+function colorSortValue(itemId: string, color: string) {
+  if (itemId !== OVERSIZED_TSHIRT_PRODUCT_ID) return color;
+  const index = OVERSIZED_TSHIRT_COLOR_ORDER.indexOf(color);
+  return index === -1 ? OVERSIZED_TSHIRT_COLOR_ORDER.length : index;
+}
+
+function compareVariantOptions(itemId: string, a: ProductVariant, b: ProductVariant) {
+  const colorSort =
+    typeof colorSortValue(itemId, a.color) === "number" &&
+    typeof colorSortValue(itemId, b.color) === "number"
+      ? Number(colorSortValue(itemId, a.color)) - Number(colorSortValue(itemId, b.color))
+      : a.color.localeCompare(b.color);
+
+  return (
+    colorSort ||
+    a.color.localeCompare(b.color) ||
+    sizeSortValue(a.size) - sizeSortValue(b.size) ||
+    a.size.localeCompare(b.size)
+  );
+}
+
 function ProductPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
@@ -197,11 +219,8 @@ function ProductPage() {
               .then(({ data: variantRows, error: variantError }) => {
                 if (variantError && !/product_variants/i.test(variantError.message))
                   console.warn("product_variants", variantError.message);
-                const rows = ((variantRows as ProductVariant[]) || []).sort(
-                  (a, b) =>
-                    a.color.localeCompare(b.color) ||
-                    sizeSortValue(a.size) - sizeSortValue(b.size) ||
-                    a.size.localeCompare(b.size),
+                const rows = ((variantRows as ProductVariant[]) || []).sort((a, b) =>
+                  compareVariantOptions(it.id, a, b),
                 );
                 setVariants(rows);
                 if (rows.length > 0) {
