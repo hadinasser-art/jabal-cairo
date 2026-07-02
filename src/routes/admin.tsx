@@ -27,10 +27,8 @@ type AdminOrderRow = {
 };
 
 function AdminPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin, adminLoading } = useAuth();
   const navigate = useNavigate();
-  const [checkingAdmin, setCheckingAdmin] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [revenue, setRevenue] = useState<RevenueRow[]>([]);
   const [orders, setOrders] = useState<AdminOrderRow[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -69,21 +67,8 @@ function AdminPage() {
       navigate({ to: "/login" });
       return;
     }
-
-    let alive = true;
-    setCheckingAdmin(true);
-    supabase.rpc("is_admin").then(({ data, error }) => {
-      if (!alive) return;
-      const allowed = !error && data === true;
-      setIsAdmin(allowed);
-      setCheckingAdmin(false);
-      if (allowed) loadAdminData();
-    });
-
-    return () => {
-      alive = false;
-    };
-  }, [user, loading, navigate]);
+    if (!adminLoading && isAdmin) loadAdminData();
+  }, [user, loading, adminLoading, isAdmin, navigate]);
 
   const summary = useMemo(() => {
     const totalRevenue = revenue.reduce((sum, row) => sum + Number(row.total_revenue_egp || 0), 0);
@@ -97,7 +82,7 @@ function AdminPage() {
     return { totalRevenue, paidOrders, currentMonth, bestMonth };
   }, [revenue]);
 
-  if (loading || checkingAdmin) {
+  if (loading || adminLoading) {
     return (
       <Layout>
         <AdminShell>

@@ -9,7 +9,7 @@ import { useI18n, type Lang } from "@/lib/i18n";
 
 export function Layout({ children }: { children: ReactNode }) {
   const { count } = useCart();
-  const { user, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const { lang, setLang, t } = useI18n();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -70,6 +70,11 @@ export function Layout({ children }: { children: ReactNode }) {
                   <Link to="/account" style={{ color: "#fff" }} className="hover:underline">
                     {t("nav.account")}
                   </Link>
+                  {isAdmin && (
+                    <Link to="/admin" style={{ color: "#fff" }} className="hover:underline">
+                      Admin
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     style={{
@@ -218,6 +223,11 @@ export function Layout({ children }: { children: ReactNode }) {
                 <Link to="/account" onClick={() => setOpen(false)} style={mobileItem}>
                   {t("nav.account")}
                 </Link>
+                {isAdmin && (
+                  <Link to="/admin" onClick={() => setOpen(false)} style={mobileItem}>
+                    Admin
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     setOpen(false);
