@@ -29,11 +29,15 @@ function LoginPage() {
 
   const google = async () => {
     setErr(null);
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin + "/auth/callback" },
+      options: {
+        redirectTo: window.location.origin + "/auth/callback",
+        skipBrowserRedirect: true,
+      },
     });
     if (error) setErr(error.message);
+    else if (data.url) window.location.assign(data.url);
   };
 
   return (

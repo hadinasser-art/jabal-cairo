@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { fetchActivePopupOffer, getOfferCopy, type Offer } from "@/lib/offer";
 import { useAuth } from "@/lib/auth";
 import { JABAL_LOGO_URL } from "@/lib/supabase";
@@ -9,12 +9,23 @@ const KEY = "jabal_offer_popup_dismissed";
 
 export function OfferPopup() {
   const { user, loading } = useAuth();
+  const location = useLocation();
   const { lang, t } = useI18n();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [open, setOpen] = useState(false);
+  const suppressOnAuthPage = [
+    "/login",
+    "/register",
+    "/forgot",
+    "/reset-password",
+    "/auth/callback",
+  ].includes(location.pathname);
 
   useEffect(() => {
-    if (loading || user) return;
+    if (loading || user || suppressOnAuthPage) {
+      setOpen(false);
+      return;
+    }
     let dismissed = false;
     try {
       dismissed = localStorage.getItem(KEY) === "1";
@@ -31,7 +42,7 @@ export function OfferPopup() {
     return () => {
       if (t) clearTimeout(t);
     };
-  }, [user, loading]);
+  }, [user, loading, suppressOnAuthPage]);
 
   const close = () => {
     setOpen(false);
@@ -42,7 +53,7 @@ export function OfferPopup() {
     }
   };
 
-  if (!open || !offer) return null;
+  if (suppressOnAuthPage || !open || !offer) return null;
 
   const copy = getOfferCopy(offer, lang);
 
