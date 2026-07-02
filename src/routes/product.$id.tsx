@@ -50,6 +50,42 @@ const OVERSIZED_TSHIRT_GALLERY_IMAGES: Record<string, { label: string; url: stri
       url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/3%3A4.png?v=20260702001751",
     },
   ],
+  "Baby Blue": [
+    {
+      label: "Front",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/baby%20blue/front.png?v=20260702015922",
+    },
+    {
+      label: "Side",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/baby%20blue/side.png?v=20260702015922",
+    },
+    {
+      label: "Detail",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/baby%20blue/image.png?v=20260702015922",
+    },
+    {
+      label: "Fit",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/baby%20blue/3%3A4.png?v=20260702015922",
+    },
+  ],
+  "Navy Blue": [
+    {
+      label: "Front",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/navy%20blue/front.png?v=20260702015039",
+    },
+    {
+      label: "Side",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/navy%20blue/side.png?v=20260702015039",
+    },
+    {
+      label: "Back",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/navy%20blue/back.png?v=20260702015039",
+    },
+    {
+      label: "Fit",
+      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/navy%20blue/3%3A4.png?v=20260702015039",
+    },
+  ],
 };
 
 export const Route = createFileRoute("/product/$id")({

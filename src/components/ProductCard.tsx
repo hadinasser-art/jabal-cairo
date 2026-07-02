@@ -70,7 +70,11 @@ function swatchColor(name: string): string {
   if (n === "black") return "#050505";
   if (n === "gray" || n === "grey") return "#8f8f8f";
   if (n === "sage") return "#727a68";
+  if (n === "baby blue") return "#9fc7de";
+  if (n === "navy blue") return "#152845";
   if (n === "steel blue") return "#345c92";
+  if (n.includes("baby blue")) return "#9fc7de";
+  if (n.includes("navy blue")) return "#152845";
   if (n.includes("steel blue")) return "#345c92";
   if (n.includes("sage")) return "#727a68";
   const map: Record<string, string> = {
