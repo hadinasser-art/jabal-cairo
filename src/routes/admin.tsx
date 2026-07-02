@@ -143,8 +143,8 @@ function AdminPage() {
     }));
   };
 
-  const saveOrder = async (orderId: string) => {
-    const draft = orderDrafts[orderId];
+  const saveOrder = async (orderId: string, patch: Partial<OrderDraft> = {}) => {
+    const draft = orderDrafts[orderId] ? { ...orderDrafts[orderId], ...patch } : null;
     if (!draft) return;
 
     setError(null);
@@ -165,6 +165,11 @@ function AdminPage() {
 
     await loadAdminData(false);
     setNotice(`${orderId} updated`);
+  };
+
+  const changeOrderStatus = (orderId: string, status: string) => {
+    updateDraft(orderId, { status });
+    saveOrder(orderId, { status });
   };
 
   const saveStock = async (variantId: string) => {
@@ -416,8 +421,9 @@ function AdminPage() {
                           <select
                             value={draft.status}
                             onChange={(event) =>
-                              updateDraft(order.order_id, { status: event.target.value })
+                              changeOrderStatus(order.order_id, event.target.value)
                             }
+                            disabled={savingOrderId === order.order_id}
                             style={controlStyle}
                             aria-label={`Status for ${order.order_id}`}
                           >
