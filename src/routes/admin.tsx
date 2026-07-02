@@ -695,18 +695,21 @@ const rowLine = {
 };
 
 const filterBarStyle = {
-  display: "flex",
-  flexWrap: "wrap" as const,
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))",
   gap: 8,
   marginBottom: 14,
+  width: "100%",
 };
 
 const filterButtonStyle = {
-  minHeight: 34,
+  width: "100%",
+  minHeight: 40,
   border: "1px solid #333",
-  padding: "0 12px",
+  padding: "0 8px",
   fontSize: 12,
   textTransform: "capitalize" as const,
+  whiteSpace: "nowrap" as const,
 };
 
 const controlStyle = {
