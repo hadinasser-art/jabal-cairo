@@ -20,8 +20,12 @@ type AdminOrderRow = {
   order_id: string;
   customer_name: string | null;
   customer_email: string | null;
+  customer_phone: string | null;
+  shipping_address: string | null;
+  order_summary: string | null;
   total_items: number | null;
   total_price_egp: number | null;
+  payment_method: string | null;
   status: string;
   tracking_number: string | null;
   payment_reference: string | null;
@@ -83,7 +87,7 @@ function AdminPage() {
       supabase
         .from("combined_orders")
         .select(
-          "order_id,customer_name,customer_email,total_items,total_price_egp,status,tracking_number,payment_reference,created_at",
+          "order_id,customer_name,customer_email,customer_phone,shipping_address,order_summary,total_items,total_price_egp,payment_method,status,tracking_number,payment_reference,created_at",
         )
         .order("created_at", { ascending: false })
         .limit(12),
@@ -365,9 +369,12 @@ function AdminPage() {
               <thead>
                 <tr>
                   <Th>Order</Th>
+                  <Th>Customer</Th>
+                  <Th>What they ordered</Th>
+                  <Th>Location</Th>
+                  <Th>Payment</Th>
                   <Th>Status</Th>
                   <Th>Tracking</Th>
-                  <Th>Payment ref</Th>
                   <Th align="right">Total</Th>
                   <Th align="right">Save</Th>
                 </tr>
@@ -388,9 +395,40 @@ function AdminPage() {
                       <Td>
                         <div style={{ color: "#fff" }}>{order.order_id}</div>
                         <div style={{ ...mutedText, marginTop: 3 }}>
-                          {order.customer_name || order.customer_email || "Guest"} ·{" "}
-                          {dateLabel(order.created_at)}
+                          {dateLabel(order.created_at)} · {order.total_items ?? 0} item
+                          {(order.total_items ?? 0) === 1 ? "" : "s"}
                         </div>
+                      </Td>
+                      <Td>
+                        <div style={{ color: "#fff" }}>
+                          {order.customer_name || order.customer_email || "Guest"}
+                        </div>
+                        <div style={detailText}>{order.customer_phone || "No phone"}</div>
+                        <div style={detailText}>{order.customer_email || "No email"}</div>
+                      </Td>
+                      <Td>
+                        {orderSummaryLines(order.order_summary).map((line, index) => (
+                          <div key={`${order.order_id}-${index}`} style={{ marginBottom: 4 }}>
+                            {line}
+                          </div>
+                        ))}
+                      </Td>
+                      <Td>
+                        <div style={addressText}>{order.shipping_address || "No address"}</div>
+                      </Td>
+                      <Td>
+                        <div style={{ color: "#fff", marginBottom: 8 }}>
+                          {paymentMethodLabel(order.payment_method)}
+                        </div>
+                        <input
+                          value={draft.payment_reference}
+                          onChange={(event) =>
+                            updateDraft(order.order_id, { payment_reference: event.target.value })
+                          }
+                          placeholder="Payment ref"
+                          style={controlStyle}
+                          aria-label={`Payment reference for ${order.order_id}`}
+                        />
                       </Td>
                       <Td>
                         <select
@@ -420,17 +458,6 @@ function AdminPage() {
                           aria-label={`Tracking number for ${order.order_id}`}
                         />
                       </Td>
-                      <Td>
-                        <input
-                          value={draft.payment_reference}
-                          onChange={(event) =>
-                            updateDraft(order.order_id, { payment_reference: event.target.value })
-                          }
-                          placeholder="Reference"
-                          style={controlStyle}
-                          aria-label={`Payment reference for ${order.order_id}`}
-                        />
-                      </Td>
                       <Td align="right">{formatPrice(Number(order.total_price_egp || 0))}</Td>
                       <Td align="right">
                         <button
@@ -452,7 +479,7 @@ function AdminPage() {
                 })}
                 {summary.filteredOrders.length === 0 && (
                   <tr>
-                    <Td colSpan={6}>
+                    <Td colSpan={9}>
                       {orders.length === 0 ? "No orders yet" : "No orders match this status"}
                     </Td>
                   </tr>
@@ -623,6 +650,20 @@ function dateLabel(value: string | null) {
   );
 }
 
+function paymentMethodLabel(value: string | null) {
+  if (value === "cod") return "Cash on delivery";
+  if (value === "instapay") return "InstaPay";
+  return value || "Not set";
+}
+
+function orderSummaryLines(value: string | null) {
+  const lines = (value || "")
+    .split("|")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.length ? lines : ["No item details"];
+}
+
 function productFromVariant(variant: AdminInventoryRow) {
   return Array.isArray(variant.item) ? variant.item[0] : variant.item;
 }
@@ -676,7 +717,7 @@ const tableStyle = {
 const orderTableStyle = {
   width: "100%",
   borderCollapse: "collapse" as const,
-  minWidth: 820,
+  minWidth: 1280,
 };
 
 const inventoryTableStyle = {
@@ -690,6 +731,20 @@ const cellBase = {
   color: "#fff",
   fontSize: 13,
   verticalAlign: "top" as const,
+  lineHeight: 1.45,
+};
+
+const detailText = {
+  ...mutedText,
+  marginTop: 3,
+  overflowWrap: "anywhere" as const,
+};
+
+const addressText = {
+  color: "#d8d8d8",
+  maxWidth: 220,
+  lineHeight: 1.45,
+  overflowWrap: "anywhere" as const,
 };
 
 const headCell = {
