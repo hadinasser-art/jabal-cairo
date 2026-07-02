@@ -358,28 +358,27 @@ function AdminPage() {
           </div>
 
           <div>
-            <div
-              className="flex items-end justify-between gap-3 flex-wrap"
-              style={{ marginBottom: 14 }}
-            >
-              <SectionHeader eyebrow="Orders" title="Manage recent orders" />
-              <label style={{ ...mutedText, display: "grid", gap: 6 }}>
-                Status
-                <select
-                  value={orderStatusFilter}
-                  onChange={(event) => setOrderStatusFilter(event.target.value)}
-                  style={{ ...controlStyle, minWidth: 170 }}
-                  aria-label="Filter orders by status"
-                >
-                  {ORDER_STATUS_FILTERS.map((status) => (
-                    <option key={status} value={status}>
-                      {status === "all"
-                        ? `all (${orders.length})`
-                        : `${status} (${summary.orderCounts[status] ?? 0})`}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <SectionHeader eyebrow="Orders" title="Manage recent orders" />
+            <div style={filterBarStyle} aria-label="Filter orders by status">
+              {ORDER_STATUS_FILTERS.map((status) => {
+                const active = orderStatusFilter === status;
+                const count = status === "all" ? orders.length : (summary.orderCounts[status] ?? 0);
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setOrderStatusFilter(status)}
+                    style={{
+                      ...filterButtonStyle,
+                      borderColor: active ? "#fff" : "#333",
+                      background: active ? "#fff" : "#050505",
+                      color: active ? "#000" : "#fff",
+                    }}
+                  >
+                    {status} ({count})
+                  </button>
+                );
+              })}
             </div>
             <div style={tableWrap}>
               <table style={tableStyle}>
@@ -687,6 +686,21 @@ const headCell = {
 
 const rowLine = {
   borderBottom: "1px solid #161616",
+};
+
+const filterBarStyle = {
+  display: "flex",
+  flexWrap: "wrap" as const,
+  gap: 8,
+  marginBottom: 14,
+};
+
+const filterButtonStyle = {
+  minHeight: 34,
+  border: "1px solid #333",
+  padding: "0 12px",
+  fontSize: 12,
+  textTransform: "capitalize" as const,
 };
 
 const controlStyle = {
