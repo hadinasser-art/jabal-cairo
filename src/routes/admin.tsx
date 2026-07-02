@@ -54,6 +54,7 @@ type OrderDraft = {
 };
 
 const ORDER_STATUSES = ["pending", "confirmed", "paid", "shipped", "delivered", "cancelled"];
+const ORDER_STATUS_FILTERS = ["all", ...ORDER_STATUSES];
 
 function AdminPage() {
   const { user, loading, isAdmin, adminLoading } = useAuth();
@@ -63,6 +64,7 @@ function AdminPage() {
   const [inventory, setInventory] = useState<AdminInventoryRow[]>([]);
   const [orderDrafts, setOrderDrafts] = useState<Record<string, OrderDraft>>({});
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [savingVariantId, setSavingVariantId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -214,9 +216,26 @@ function AdminPage() {
     const lowStock = inventory.filter(
       (variant) => variant.stock_quantity > 0 && variant.stock_quantity <= 3,
     );
+    const filteredOrders =
+      orderStatusFilter === "all"
+        ? orders
+        : orders.filter((order) => order.status === orderStatusFilter);
+    const orderCounts = ORDER_STATUSES.reduce<Record<string, number>>((counts, status) => {
+      counts[status] = orders.filter((order) => order.status === status).length;
+      return counts;
+    }, {});
 
-    return { totalRevenue, paidOrders, currentMonth, bestMonth, totalStock, lowStock };
-  }, [revenue, inventory]);
+    return {
+      totalRevenue,
+      paidOrders,
+      currentMonth,
+      bestMonth,
+      totalStock,
+      lowStock,
+      filteredOrders,
+      orderCounts,
+    };
+  }, [revenue, inventory, orders, orderStatusFilter]);
 
   if (loading || adminLoading) {
     return (
@@ -339,7 +358,29 @@ function AdminPage() {
           </div>
 
           <div>
-            <SectionHeader eyebrow="Orders" title="Manage recent orders" />
+            <div
+              className="flex items-end justify-between gap-3 flex-wrap"
+              style={{ marginBottom: 14 }}
+            >
+              <SectionHeader eyebrow="Orders" title="Manage recent orders" />
+              <label style={{ ...mutedText, display: "grid", gap: 6 }}>
+                Status
+                <select
+                  value={orderStatusFilter}
+                  onChange={(event) => setOrderStatusFilter(event.target.value)}
+                  style={{ ...controlStyle, minWidth: 170 }}
+                  aria-label="Filter orders by status"
+                >
+                  {ORDER_STATUS_FILTERS.map((status) => (
+                    <option key={status} value={status}>
+                      {status === "all"
+                        ? `all (${orders.length})`
+                        : `${status} (${summary.orderCounts[status] ?? 0})`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <div style={tableWrap}>
               <table style={tableStyle}>
                 <thead>
@@ -353,7 +394,7 @@ function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((order) => {
+                  {summary.filteredOrders.map((order) => {
                     const draft = orderDrafts[order.order_id] ?? {
                       status: order.status,
                       tracking_number: order.tracking_number ?? "",
@@ -429,9 +470,11 @@ function AdminPage() {
                       </tr>
                     );
                   })}
-                  {orders.length === 0 && (
+                  {summary.filteredOrders.length === 0 && (
                     <tr>
-                      <Td colSpan={6}>No orders yet</Td>
+                      <Td colSpan={6}>
+                        {orders.length === 0 ? "No orders yet" : "No orders match this status"}
+                      </Td>
                     </tr>
                   )}
                 </tbody>
