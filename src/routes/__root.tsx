@@ -15,6 +15,7 @@ import { CartProvider } from "../lib/cart";
 import { I18nProvider } from "../lib/i18n";
 import { AuthProvider } from "../lib/auth";
 import { OfferPopup } from "../components/OfferPopup";
+import { MarketingConsentPrompt } from "../components/MarketingConsentPrompt";
 import { Toaster } from "sonner";
 
 function NotFoundComponent() {
@@ -107,6 +108,7 @@ function RootComponent() {
           <CartProvider>
             <Outlet />
             <OfferPopup />
+            <MarketingConsentPrompt />
             <Toaster position="top-right" theme="dark" />
           </CartProvider>
         </AuthProvider>
