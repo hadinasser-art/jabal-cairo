@@ -3,9 +3,6 @@ import { useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { supabase } from "@/lib/supabase";
 import { upsertProfile } from "@/lib/profile";
-import { recordMarketingConsent } from "@/lib/marketing";
-
-const PENDING_MARKETING_CONSENT_KEY = "pendingMarketingConsent";
 
 export const Route = createFileRoute("/auth/callback")({
   component: CallbackPage,
@@ -31,17 +28,8 @@ function CallbackPage() {
           city: null,
           governorate: null,
         });
-        if (localStorage.getItem(PENDING_MARKETING_CONSENT_KEY) === "1" && u.email) {
-          await recordMarketingConsent({
-            email: u.email,
-            userId: u.id,
-            source: "website",
-          });
-          localStorage.removeItem(PENDING_MARKETING_CONSENT_KEY);
-        }
         navigate({ to: "/account" });
       } else {
-        localStorage.removeItem(PENDING_MARKETING_CONSENT_KEY);
         navigate({ to: "/login" });
       }
     })();
