@@ -23,7 +23,6 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as ApiCronProcessEmailsRouteImport } from './routes/api/cron/process-emails'
 
 const WomenRoute = WomenRouteImport.update({
   id: '/women',
@@ -95,11 +94,6 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCronProcessEmailsRoute = ApiCronProcessEmailsRouteImport.update({
-  id: '/api/cron/process-emails',
-  path: '/api/cron/process-emails',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -116,7 +110,6 @@ export interface FileRoutesByFullPath {
   '/women': typeof WomenRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$id': typeof ProductIdRoute
-  '/api/cron/process-emails': typeof ApiCronProcessEmailsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -133,7 +126,6 @@ export interface FileRoutesByTo {
   '/women': typeof WomenRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$id': typeof ProductIdRoute
-  '/api/cron/process-emails': typeof ApiCronProcessEmailsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -151,7 +143,6 @@ export interface FileRoutesById {
   '/women': typeof WomenRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$id': typeof ProductIdRoute
-  '/api/cron/process-emails': typeof ApiCronProcessEmailsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -170,7 +161,6 @@ export interface FileRouteTypes {
     | '/women'
     | '/auth/callback'
     | '/product/$id'
-    | '/api/cron/process-emails'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -187,7 +177,6 @@ export interface FileRouteTypes {
     | '/women'
     | '/auth/callback'
     | '/product/$id'
-    | '/api/cron/process-emails'
   id:
     | '__root__'
     | '/'
@@ -204,7 +193,6 @@ export interface FileRouteTypes {
     | '/women'
     | '/auth/callback'
     | '/product/$id'
-    | '/api/cron/process-emails'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -222,7 +210,6 @@ export interface RootRouteChildren {
   WomenRoute: typeof WomenRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   ProductIdRoute: typeof ProductIdRoute
-  ApiCronProcessEmailsRoute: typeof ApiCronProcessEmailsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -325,13 +312,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/cron/process-emails': {
-      id: '/api/cron/process-emails'
-      path: '/api/cron/process-emails'
-      fullPath: '/api/cron/process-emails'
-      preLoaderRoute: typeof ApiCronProcessEmailsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -350,7 +330,6 @@ const rootRouteChildren: RootRouteChildren = {
   WomenRoute: WomenRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   ProductIdRoute: ProductIdRoute,
-  ApiCronProcessEmailsRoute: ApiCronProcessEmailsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
