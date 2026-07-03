@@ -181,7 +181,7 @@ export function getFallbackProductMediaConfig(item: Item): ProductMediaConfig {
     FALLBACK_SIZE_CHARTS[item.id] || (label.includes("wide leg") ? WIDE_LEG_SIZE_CHART_URL : null);
 
   return {
-    colorOrder: FALLBACK_COLOR_ORDER[item.id] ?? [],
+    colorOrder: item.color_order?.length ? item.color_order : (FALLBACK_COLOR_ORDER[item.id] ?? []),
     sizeChartUrl,
     media: FALLBACK_MEDIA[item.id] ?? [],
   };

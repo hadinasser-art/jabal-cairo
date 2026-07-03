@@ -78,12 +78,15 @@ function getCardImageUrl(item: Item) {
 
 function sortCardColors(item: Item) {
   const colors = item.color || [];
-  if (item.id !== OVERSIZED_TSHIRT_PRODUCT_ID) return colors;
+  const colorOrder =
+    item.color_order ||
+    (item.id === OVERSIZED_TSHIRT_PRODUCT_ID ? OVERSIZED_TSHIRT_COLOR_ORDER : []);
+  if (colorOrder.length === 0) return colors;
   return [...colors].sort((a, b) => {
-    const aIndex = OVERSIZED_TSHIRT_COLOR_ORDER.indexOf(a);
-    const bIndex = OVERSIZED_TSHIRT_COLOR_ORDER.indexOf(b);
-    const aSort = aIndex === -1 ? OVERSIZED_TSHIRT_COLOR_ORDER.length : aIndex;
-    const bSort = bIndex === -1 ? OVERSIZED_TSHIRT_COLOR_ORDER.length : bIndex;
+    const aIndex = colorOrder.indexOf(a);
+    const bIndex = colorOrder.indexOf(b);
+    const aSort = aIndex === -1 ? colorOrder.length : aIndex;
+    const bSort = bIndex === -1 ? colorOrder.length : bIndex;
     return aSort - bSort || a.localeCompare(b);
   });
 }

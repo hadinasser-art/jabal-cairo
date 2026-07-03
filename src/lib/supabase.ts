@@ -48,6 +48,7 @@ export type Item = {
   sold_out: boolean;
   created_at: string;
   gender?: Gender | null;
+  color_order?: string[] | null;
 };
 
 export type ProductVariant = {
