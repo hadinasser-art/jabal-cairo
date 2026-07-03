@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-type MarketingConsentSource = "register" | "checkout";
+type MarketingConsentSource = "website" | "register" | "checkout";
 
 export async function recordMarketingConsent({
   email,

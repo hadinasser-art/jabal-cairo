@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { upsertProfile } from "@/lib/profile";
 import { recordMarketingConsent } from "@/lib/marketing";
 
-const GOOGLE_MARKETING_OPT_IN_KEY = "jabal_google_marketing_opt_in";
+const PENDING_MARKETING_CONSENT_KEY = "pendingMarketingConsent";
 
 export const Route = createFileRoute("/auth/callback")({
   component: CallbackPage,
@@ -31,16 +31,17 @@ function CallbackPage() {
           city: null,
           governorate: null,
         });
-        if (sessionStorage.getItem(GOOGLE_MARKETING_OPT_IN_KEY) === "1" && u.email) {
+        if (localStorage.getItem(PENDING_MARKETING_CONSENT_KEY) === "1" && u.email) {
           await recordMarketingConsent({
             email: u.email,
             userId: u.id,
-            source: "register",
+            source: "website",
           });
-          sessionStorage.removeItem(GOOGLE_MARKETING_OPT_IN_KEY);
+          localStorage.removeItem(PENDING_MARKETING_CONSENT_KEY);
         }
         navigate({ to: "/account" });
       } else {
+        localStorage.removeItem(PENDING_MARKETING_CONSENT_KEY);
         navigate({ to: "/login" });
       }
     })();
