@@ -16,6 +16,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as MenRouteImport } from './routes/men'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotRouteImport } from './routes/forgot'
+import { Route as FeaturedRouteImport } from './routes/featured'
 import { Route as ConfirmationRouteImport } from './routes/confirmation'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -57,6 +58,11 @@ const LoginRoute = LoginRouteImport.update({
 const ForgotRoute = ForgotRouteImport.update({
   id: '/forgot',
   path: '/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeaturedRoute = FeaturedRouteImport.update({
+  id: '/featured',
+  path: '/featured',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfirmationRoute = ConfirmationRouteImport.update({
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/cart': typeof CartRoute
   '/confirmation': typeof ConfirmationRoute
+  '/featured': typeof FeaturedRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
   '/men': typeof MenRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/cart': typeof CartRoute
   '/confirmation': typeof ConfirmationRoute
+  '/featured': typeof FeaturedRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
   '/men': typeof MenRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/cart': typeof CartRoute
   '/confirmation': typeof ConfirmationRoute
+  '/featured': typeof FeaturedRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
   '/men': typeof MenRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/cart'
     | '/confirmation'
+    | '/featured'
     | '/forgot'
     | '/login'
     | '/men'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/cart'
     | '/confirmation'
+    | '/featured'
     | '/forgot'
     | '/login'
     | '/men'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/cart'
     | '/confirmation'
+    | '/featured'
     | '/forgot'
     | '/login'
     | '/men'
@@ -201,6 +213,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   CartRoute: typeof CartRoute
   ConfirmationRoute: typeof ConfirmationRoute
+  FeaturedRoute: typeof FeaturedRoute
   ForgotRoute: typeof ForgotRoute
   LoginRoute: typeof LoginRoute
   MenRoute: typeof MenRoute
@@ -263,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/featured': {
+      id: '/featured'
+      path: '/featured'
+      fullPath: '/featured'
+      preLoaderRoute: typeof FeaturedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/confirmation': {
       id: '/confirmation'
       path: '/confirmation'
@@ -321,6 +341,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   CartRoute: CartRoute,
   ConfirmationRoute: ConfirmationRoute,
+  FeaturedRoute: FeaturedRoute,
   ForgotRoute: ForgotRoute,
   LoginRoute: LoginRoute,
   MenRoute: MenRoute,

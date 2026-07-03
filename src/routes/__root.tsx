@@ -15,10 +15,7 @@ import { CartProvider } from "../lib/cart";
 import { I18nProvider } from "../lib/i18n";
 import { AuthProvider } from "../lib/auth";
 import { OfferPopup } from "../components/OfferPopup";
-import { JABAL_LOGO_URL } from "../lib/supabase";
 import { Toaster } from "sonner";
-
-const FAVICON_VERSION = "2";
 
 function NotFoundComponent() {
   return (
@@ -67,36 +64,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "JABAL — Premium Fashion" },
-      { name: "description", content: "JABAL — premium minimal fashion." },
-      { property: "og:title", content: "JABAL — Premium Fashion" },
-      { property: "og:description", content: "Premium minimal fashion." },
-      { property: "og:image", content: JABAL_LOGO_URL },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:image", content: JABAL_LOGO_URL },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: `/favicon.svg?v=${FAVICON_VERSION}`, type: "image/svg+xml" },
-      {
-        rel: "icon",
-        href: `/favicon-32x32.png?v=${FAVICON_VERSION}`,
-        type: "image/png",
-        sizes: "32x32",
-      },
-      {
-        rel: "icon",
-        href: `/favicon-16x16.png?v=${FAVICON_VERSION}`,
-        type: "image/png",
-        sizes: "16x16",
-      },
-      { rel: "shortcut icon", href: `/favicon.ico?v=${FAVICON_VERSION}` },
-      {
-        rel: "apple-touch-icon",
-        href: `/apple-touch-icon.png?v=${FAVICON_VERSION}`,
-        sizes: "180x180",
-      },
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "icon", type: "image/png", href: "/icon.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

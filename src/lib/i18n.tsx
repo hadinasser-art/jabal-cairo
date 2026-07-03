@@ -31,7 +31,7 @@ const DICT: Dict = {
   "section.empty": { en: "No products yet.", ar: "لا توجد منتجات حالياً." },
   "home.title": { en: "Effortless every day.", ar: "أناقة يومية بلا مجهود." },
   "home.sub": {
-    en: "Considered essentials. Made for the modern wardrobe.",
+    en: "Shop JABAL Wear for premium everyday clothing, clean silhouettes, and modern essentials made for your wardrobe.",
     ar: "أساسيات مختارة لخزانة عصرية.",
   },
   "home.featured.eyebrow": { en: "Featured", ar: "مختارات" },

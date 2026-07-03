@@ -6,9 +6,29 @@ import { fetchFeaturedItems, fetchItemsByGender } from "@/lib/items";
 import type { Item } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n";
 
+const HOME_TITLE = "JABAL Wear | Premium Fashion Essentials";
+const HOME_DESCRIPTION =
+  "Shop JABAL Wear for premium everyday clothing, clean silhouettes, and modern essentials made for your wardrobe.";
+const SITE_URL = "https://jabalwear.com";
+const OG_IMAGE_URL = `${SITE_URL}/og-image.png`;
+
 export const Route = createFileRoute("/")({
   head: () => ({
-    meta: [{ title: "JABAL" }, { name: "description", content: "Premium minimal fashion." }],
+    meta: [
+      { title: HOME_TITLE },
+      { name: "description", content: HOME_DESCRIPTION },
+      { property: "og:title", content: HOME_TITLE },
+      { property: "og:description", content: HOME_DESCRIPTION },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:site_name", content: "JABAL Wear" },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: OG_IMAGE_URL },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: HOME_TITLE },
+      { name: "twitter:description", content: HOME_DESCRIPTION },
+      { name: "twitter:image", content: OG_IMAGE_URL },
+    ],
+    links: [{ rel: "canonical", href: SITE_URL }],
   }),
   component: Index,
 });
@@ -56,7 +76,7 @@ function Index() {
             <div className="mt-8 flex gap-3 flex-wrap">
               <Link to="/men" className="jb-btn">
                 {t("nav.shopmen")}
-              </Link>
+              </Link>{" "}
               <Link to="/women" className="jb-btn-ghost">
                 {t("nav.shopwomen")}
               </Link>

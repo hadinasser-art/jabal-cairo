@@ -42,13 +42,15 @@ export function Layout({ children }: { children: ReactNode }) {
           >
             <Link
               to="/men"
+              aria-label={t("nav.men")}
               className="hover:underline"
               style={{ color: "#fff", textUnderlineOffset: 4 }}
             >
               {t("nav.men")}
-            </Link>
+            </Link>{" "}
             <Link
               to="/women"
+              aria-label={t("nav.women")}
               className="hover:underline"
               style={{ color: "#fff", textUnderlineOffset: 4 }}
             >
@@ -69,7 +71,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 <>
                   <Link to="/account" style={{ color: "#fff" }} className="hover:underline">
                     {t("nav.account")}
-                  </Link>
+                  </Link>{" "}
                   {isAdmin && (
                     <Link to="/admin" style={{ color: "#fff" }} className="hover:underline">
                       Admin
@@ -94,7 +96,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 <>
                   <Link to="/login" style={{ color: "#fff" }} className="hover:underline">
                     {t("nav.login")}
-                  </Link>
+                  </Link>{" "}
                   <Link to="/register" style={{ color: "#fff" }} className="hover:underline">
                     {t("nav.register")}
                   </Link>
@@ -269,7 +271,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 style={{ height: 28, filter: "invert(1) brightness(2)" }}
               />
             </div>
-            <div>
+            <div data-nosnippet>
               <div className="jb-eyebrow" style={{ color: "#fff" }}>
                 {t("footer.help")}
               </div>
