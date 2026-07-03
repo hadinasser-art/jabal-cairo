@@ -8,22 +8,7 @@ import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
-    meta: [
-      { title: "JABAL | Minimal Everyday Fashion in Egypt" },
-      {
-        name: "description",
-        content:
-          "Shop JABAL for minimal everyday essentials in Egypt: men's and women's basics, oversized tees, shorts, and clean wardrobe staples.",
-      },
-      { property: "og:title", content: "JABAL | Minimal Everyday Fashion in Egypt" },
-      {
-        property: "og:description",
-        content:
-          "Minimal everyday essentials from JABAL: men's and women's basics, oversized tees, shorts, and clean wardrobe staples.",
-      },
-      { property: "og:url", content: "https://jabalwear.com" },
-    ],
-    links: [{ rel: "canonical", href: "https://jabalwear.com" }],
+    meta: [{ title: "JABAL" }, { name: "description", content: "Premium minimal fashion." }],
   }),
   component: Index,
 });

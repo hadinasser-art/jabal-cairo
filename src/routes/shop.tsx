@@ -11,19 +11,9 @@ import { useI18n } from "@/lib/i18n";
 export const Route = createFileRoute("/shop")({
   head: () => ({
     meta: [
-      { title: "Shop JABAL | Minimal Everyday Essentials" },
-      {
-        name: "description",
-        content:
-          "Shop JABAL's full collection of minimal everyday fashion essentials, including men's and women's basics, oversized tees, shorts, and wardrobe staples.",
-      },
-      { property: "og:title", content: "Shop JABAL | Minimal Everyday Essentials" },
-      {
-        property: "og:description",
-        content: "Explore JABAL's minimal everyday essentials for men and women in Egypt.",
-      },
+      { title: "Shop — JABAL" },
+      { name: "description", content: "Shop the JABAL collection." },
     ],
-    links: [{ rel: "canonical", href: "https://jabalwear.com/shop" }],
   }),
   component: ShopPage,
 });
