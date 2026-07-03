@@ -3,6 +3,9 @@ import { useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { supabase } from "@/lib/supabase";
 import { upsertProfile } from "@/lib/profile";
+import { recordMarketingConsent } from "@/lib/marketing";
+
+const GOOGLE_MARKETING_OPT_IN_KEY = "jabal_google_marketing_opt_in";
 
 export const Route = createFileRoute("/auth/callback")({
   component: CallbackPage,
@@ -28,6 +31,14 @@ function CallbackPage() {
           city: null,
           governorate: null,
         });
+        if (sessionStorage.getItem(GOOGLE_MARKETING_OPT_IN_KEY) === "1" && u.email) {
+          await recordMarketingConsent({
+            email: u.email,
+            userId: u.id,
+            source: "register",
+          });
+          sessionStorage.removeItem(GOOGLE_MARKETING_OPT_IN_KEY);
+        }
         navigate({ to: "/account" });
       } else {
         navigate({ to: "/login" });

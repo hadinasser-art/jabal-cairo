@@ -6,6 +6,8 @@ import { upsertProfile } from "@/lib/profile";
 import { recordMarketingConsent } from "@/lib/marketing";
 import { useI18n } from "@/lib/i18n";
 
+const GOOGLE_MARKETING_OPT_IN_KEY = "jabal_google_marketing_opt_in";
+
 export const Route = createFileRoute("/register")({
   validateSearch: (s: Record<string, unknown>) => ({ google: s.google ? 1 : undefined }),
   head: () => ({ meta: [{ title: "Register — JABAL" }] }),
@@ -31,6 +33,12 @@ function RegisterPage() {
   }, []);
 
   const googleSignup = async () => {
+    if (marketingOptIn) {
+      sessionStorage.setItem(GOOGLE_MARKETING_OPT_IN_KEY, "1");
+    } else {
+      sessionStorage.removeItem(GOOGLE_MARKETING_OPT_IN_KEY);
+    }
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
