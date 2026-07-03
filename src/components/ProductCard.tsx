@@ -7,9 +7,6 @@ const OVERSIZED_TSHIRT_PRODUCT_ID = "c5d77496-59d1-4dc5-baf0-1d6f34352ea9";
 const OVERSIZED_TSHIRT_COLOR_ORDER = ["Orange", "Navy Blue", "Baby Blue"];
 const OVERSIZED_TSHIRT_CARD_IMAGE_URL =
   "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/front.png?v=20260702172413";
-const WIDE_LEG_SWEATS_PRODUCT_ID = "b8a38c8a-7300-48ed-9c00-2ac29f130aca";
-const WIDE_LEG_SWEATS_CARD_IMAGE_URL =
-  "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/women/wide%20leg/brown%20wide%20leg.jpg";
 
 export function ProductCard({ item }: { item: Item }) {
   const { t } = useI18n();
@@ -76,7 +73,6 @@ export function ProductCard({ item }: { item: Item }) {
 
 function getCardImageUrl(item: Item) {
   if (item.id === OVERSIZED_TSHIRT_PRODUCT_ID) return OVERSIZED_TSHIRT_CARD_IMAGE_URL;
-  if (item.id === WIDE_LEG_SWEATS_PRODUCT_ID) return WIDE_LEG_SWEATS_CARD_IMAGE_URL;
   return item.image_url;
 }
 
