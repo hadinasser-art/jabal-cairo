@@ -9,7 +9,9 @@ const FALLBACK_SUPABASE_ANON_KEY =
 function requiredPublicEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY", fallback: string) {
   const value = import.meta.env[name];
   if (value) return value;
-  if (import.meta.env.PROD) throw new Error(`${name} must be configured for production builds.`);
+  if (import.meta.env.PROD) {
+    console.warn(`${name} is not configured; using bundled public Supabase fallback.`);
+  }
   return fallback;
 }
 
