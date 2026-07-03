@@ -224,6 +224,10 @@ const DICT: Dict = {
     en: "Please enter a valid phone number.",
     ar: "من فضلك أدخل رقم هاتف صحيح.",
   },
+  "marketing.optIn": {
+    en: "Email me offers, launches, and JABAL updates. I can unsubscribe anytime.",
+    ar: "أرسلوا لي العروض والإصدارات وتحديثات JABAL عبر البريد الإلكتروني. يمكنني إلغاء الاشتراك في أي وقت.",
+  },
 
   // confirmation
   "ok.eyebrow": { en: "Order confirmed", ar: "تم تأكيد الطلب" },

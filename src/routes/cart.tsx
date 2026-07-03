@@ -11,6 +11,7 @@ import {
   JABAL_SUPPORT_EMAIL,
 } from "@/lib/supabase";
 import { loadProfile, upsertProfile } from "@/lib/profile";
+import { recordMarketingConsent } from "@/lib/marketing";
 import { AppliedOfferLine, OfferCountdown } from "@/components/OfferCountdown";
 import {
   calculateOfferTotals,
@@ -121,6 +122,7 @@ function CartPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(empty);
   const [savePrefs, setSavePrefs] = useState(true);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [payment, setPayment] = useState<PayMethod>("cod");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -354,6 +356,14 @@ function CartPage() {
         });
       }
 
+      if (marketingOptIn) {
+        await recordMarketingConsent({
+          email: form.email.trim(),
+          userId: user?.id ?? null,
+          source: "checkout",
+        });
+      }
+
       try {
         sessionStorage.setItem(
           "jabal_last_order",
@@ -455,6 +465,18 @@ function CartPage() {
                 on={(v) => set("phone", v)}
                 required
               />
+              <label
+                className="flex items-start gap-3"
+                style={{ fontSize: 12, lineHeight: 1.6, color: "#9a9a9a" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={marketingOptIn}
+                  onChange={(e) => setMarketingOptIn(e.target.checked)}
+                  style={{ marginTop: 3 }}
+                />
+                <span>{t("marketing.optIn")}</span>
+              </label>
             </Section>
 
             <Section title={t("cart.address")}>
