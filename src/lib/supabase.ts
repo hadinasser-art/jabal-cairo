@@ -2,11 +2,19 @@ import { createClient } from "@supabase/supabase-js";
 
 // These two values are public browser config. Keep private keys such as the
 // service role key in server-only env vars.
-const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL ?? "https://ymzbqlobqlumkmvukyza.supabase.co";
-const SUPABASE_ANON_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ??
+const FALLBACK_SUPABASE_URL = "https://ymzbqlobqlumkmvukyza.supabase.co";
+const FALLBACK_SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltemJxbG9icWx1bWttdnVreXphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1ODA3NTIsImV4cCI6MjA5ODE1Njc1Mn0.mZGt9XFdWNQlCmPHktcPWjJB2nRD9YnhRG-z2Q7nRPY";
+
+function requiredPublicEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY", fallback: string) {
+  const value = import.meta.env[name];
+  if (value) return value;
+  if (import.meta.env.PROD) throw new Error(`${name} must be configured for production builds.`);
+  return fallback;
+}
+
+const SUPABASE_URL = requiredPublicEnv("VITE_SUPABASE_URL", FALLBACK_SUPABASE_URL);
+const SUPABASE_ANON_KEY = requiredPublicEnv("VITE_SUPABASE_ANON_KEY", FALLBACK_SUPABASE_ANON_KEY);
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

@@ -9,6 +9,16 @@ import {
   sortSizes,
   sizeSortValue,
 } from "@/lib/supabase";
+import {
+  colorSortValue,
+  fetchProductMediaConfig,
+  getFallbackProductMediaConfig,
+  getInitialProductColor,
+  getProductColorImage,
+  getProductGalleryImages,
+  hasProductImageVariants,
+  type ProductMediaConfig,
+} from "@/lib/product-media";
 import { useCart } from "@/lib/cart";
 import { notifyAddedToBag } from "@/lib/notify";
 import { useI18n } from "@/lib/i18n";
@@ -17,147 +27,15 @@ import { OfferCountdown } from "@/components/OfferCountdown";
 import { fetchOffers, type Offer } from "@/lib/offer";
 import { FavoriteButton } from "@/components/FavoriteButton";
 
-const SHORTS_PRODUCT_ID = "e13c0513-522d-4133-af02-2c6f0c33e9ce";
-const OVERSIZED_TSHIRT_PRODUCT_ID = "c5d77496-59d1-4dc5-baf0-1d6f34352ea9";
-const OVERSIZED_TSHIRT_COLOR_ORDER = ["Orange", "Navy Blue", "Baby Blue"];
-const SHORTS_SIZE_CHART_URL =
-  "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/short%20measurements.jpg";
-const WIDE_LEG_SIZE_CHART_URL =
-  "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/women/wide%20leg/wide%20leg%20women%20chart.jpg";
-const SHORTS_COLOR_IMAGES: Record<string, string> = {
-  Black:
-    "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/black.jpg",
-  Gray: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/gray.jpg",
-  Sage: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/sage.jpg",
-  "Steel Blue":
-    "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/shorts/Steel%20Blue.jpg",
-};
-const OVERSIZED_TSHIRT_GALLERY_IMAGES: Record<string, { label: string; url: string }[]> = {
-  Orange: [
-    {
-      label: "Front",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/front.png?v=20260702172413",
-    },
-    {
-      label: "Side",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/side.png?v=20260702172413",
-    },
-    {
-      label: "Back",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/back.png?v=20260702172413",
-    },
-    {
-      label: "Fit",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/orange/3%3A4.png?v=20260702172413",
-    },
-  ],
-  "Baby Blue": [
-    {
-      label: "Front",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/baby%20blue/front.png?v=20260702015922",
-    },
-    {
-      label: "Side",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/baby%20blue/side.png?v=20260702015922",
-    },
-    {
-      label: "Detail",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/baby%20blue/image.png?v=20260702015922",
-    },
-    {
-      label: "Fit",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/baby%20blue/3%3A4.png?v=20260702015922",
-    },
-  ],
-  "Navy Blue": [
-    {
-      label: "Front",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/navy%20blue/front.png?v=20260702155114",
-    },
-    {
-      label: "Side",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/navy%20blue/side.png?v=20260702155114",
-    },
-    {
-      label: "Back",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/navy%20blue/back.png?v=20260702155114",
-    },
-    {
-      label: "Fit",
-      url: "https://ymzbqlobqlumkmvukyza.supabase.co/storage/v1/object/public/products/men/oversized%20tshirt/navy%20blue/3%3A4.png?v=20260702155114",
-    },
-  ],
-};
-
 export const Route = createFileRoute("/product/$id")({
   component: ProductPage,
 });
 
-function getVariantImage(item: Item, selectedColor: string | null) {
-  if (item.id === SHORTS_PRODUCT_ID && selectedColor && SHORTS_COLOR_IMAGES[selectedColor]) {
-    return SHORTS_COLOR_IMAGES[selectedColor];
-  }
-  return item.image_url;
-}
-
-function hasImageVariants(item: Item) {
-  return item.id === SHORTS_PRODUCT_ID || item.id === OVERSIZED_TSHIRT_PRODUCT_ID;
-}
-
-function uniqueGalleryImages(images: { label: string; url: string }[]) {
-  const seen = new Set<string>();
-  return images.filter((image) => {
-    if (!image.url || seen.has(image.url)) return false;
-    seen.add(image.url);
-    return true;
-  });
-}
-
-function getGalleryImages(
-  item: Item,
-  selectedColor: string | null,
-  selectedImage: string | null,
-  variants: ProductVariant[],
-) {
-  if (item.id === OVERSIZED_TSHIRT_PRODUCT_ID && selectedColor) {
-    return uniqueGalleryImages(OVERSIZED_TSHIRT_GALLERY_IMAGES[selectedColor] ?? []);
-  }
-
-  return uniqueGalleryImages([
-    ...(selectedImage ? [{ label: selectedColor || "Main", url: selectedImage }] : []),
-    ...variants
-      .filter((variant) => !selectedColor || variant.color === selectedColor)
-      .map((variant) => ({ label: variant.size, url: variant.image_url || "" })),
-  ]);
-}
-
-function getSizeChartUrl(item: Item) {
-  if (item.id === SHORTS_PRODUCT_ID) return SHORTS_SIZE_CHART_URL;
-  const label = `${item.name} ${item.category ?? ""}`.toLowerCase();
-  if (label.includes("wide leg")) return WIDE_LEG_SIZE_CHART_URL;
-  return null;
-}
-
-function getInitialColor(item: Item) {
-  if (item.id === SHORTS_PRODUCT_ID) return item.color?.[0] ?? null;
-  if (item.id === OVERSIZED_TSHIRT_PRODUCT_ID) {
-    return OVERSIZED_TSHIRT_COLOR_ORDER.find((color) => item.color?.includes(color)) ?? null;
-  }
-  return item.color && item.color.length === 1 ? item.color[0] : null;
-}
-
-function colorSortValue(itemId: string, color: string) {
-  if (itemId !== OVERSIZED_TSHIRT_PRODUCT_ID) return color;
-  const index = OVERSIZED_TSHIRT_COLOR_ORDER.indexOf(color);
-  return index === -1 ? OVERSIZED_TSHIRT_COLOR_ORDER.length : index;
-}
-
-function compareVariantOptions(itemId: string, a: ProductVariant, b: ProductVariant) {
+function compareVariantOptions(config: ProductMediaConfig, a: ProductVariant, b: ProductVariant) {
   const colorSort =
-    typeof colorSortValue(itemId, a.color) === "number" &&
-    typeof colorSortValue(itemId, b.color) === "number"
-      ? Number(colorSortValue(itemId, a.color)) - Number(colorSortValue(itemId, b.color))
-      : a.color.localeCompare(b.color);
+    config.colorOrder.length > 0
+      ? colorSortValue(config, a.color) - colorSortValue(config, b.color)
+      : 0;
 
   return (
     colorSort ||
@@ -174,6 +52,7 @@ function ProductPage() {
   const { t } = useI18n();
   const [item, setItem] = useState<Item | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [mediaConfig, setMediaConfig] = useState<ProductMediaConfig | null>(null);
   const [related, setRelated] = useState<Item[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [size, setSize] = useState<string | null>(null);
@@ -196,6 +75,7 @@ function ProductPage() {
     setItem(null);
     setErr(null);
     setVariants([]);
+    setMediaConfig(null);
     supabase
       .from("items")
       .select("*")
@@ -207,8 +87,17 @@ function ProductPage() {
           const it = data as Item | null;
           setItem(it);
           if (it) {
+            const fallbackConfig = getFallbackProductMediaConfig(it);
+            setMediaConfig(fallbackConfig);
             setSize(it.size && it.size.length === 1 ? it.size[0] : null);
-            setColor(getInitialColor(it));
+            setColor(getInitialProductColor(it, fallbackConfig));
+            fetchProductMediaConfig(it).then((config) => {
+              setMediaConfig(config);
+              setVariants((current) =>
+                [...current].sort((a, b) => compareVariantOptions(config, a, b)),
+              );
+              setColor((current) => current ?? getInitialProductColor(it, config));
+            });
             supabase
               .from("product_variants")
               .select("*")
@@ -219,7 +108,7 @@ function ProductPage() {
                 if (variantError && !/product_variants/i.test(variantError.message))
                   console.warn("product_variants", variantError.message);
                 const rows = ((variantRows as ProductVariant[]) || []).sort((a, b) =>
-                  compareVariantOptions(it.id, a, b),
+                  compareVariantOptions(fallbackConfig, a, b),
                 );
                 setVariants(rows);
                 if (rows.length > 0) {
@@ -250,7 +139,7 @@ function ProductPage() {
         </div>
       </Layout>
     );
-  if (!item)
+  if (!item || !mediaConfig)
     return (
       <Layout>
         <div className="grid lg:grid-cols-2 gap-8 p-6 md:p-12 max-w-7xl mx-auto">
@@ -295,12 +184,13 @@ function ProductPage() {
     ? (variants.find((variant) => variant.color === color && variant.image_url)?.image_url ?? null)
     : null;
   const selectedImage =
-    selectedVariant?.image_url || selectedColorImage || getVariantImage(item, color);
-  const galleryImages = getGalleryImages(item, color, selectedImage, variants);
+    selectedVariant?.image_url ||
+    selectedColorImage ||
+    getProductColorImage(item, color, mediaConfig);
+  const galleryImages = getProductGalleryImages(item, color, selectedImage, variants, mediaConfig);
   const activeGalleryImage = galleryImages[galleryIndex]?.url || selectedImage;
-  const imageVariantProduct =
-    hasImageVariants(item) || variants.some((variant) => Boolean(variant.image_url));
-  const sizeChartUrl = getSizeChartUrl(item);
+  const imageVariantProduct = hasProductImageVariants(item, variants, mediaConfig);
+  const sizeChartUrl = mediaConfig.sizeChartUrl;
   const maxQty = Math.max(1, selectedStock);
 
   const goToPreviousGalleryImage = () => {
@@ -496,7 +386,7 @@ function ProductPage() {
                   const sel = c === color;
                   const variantImage =
                     variants.find((variant) => variant.color === c && variant.image_url)
-                      ?.image_url || getVariantImage(item, c);
+                      ?.image_url || getProductColorImage(item, c, mediaConfig);
                   const colorStock = hasVariants
                     ? variants
                         .filter((variant) => variant.color === c)

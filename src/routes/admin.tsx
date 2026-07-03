@@ -58,7 +58,8 @@ type OrderDraft = {
 };
 
 const ORDER_STATUSES = ["pending", "confirmed", "paid", "shipped", "delivered", "cancelled"];
-const ORDER_STATUS_FILTERS = ["all", ...ORDER_STATUSES];
+const ORDER_STATUS_FILTERS = ["all", "needs_action", ...ORDER_STATUSES];
+const PAGE_SIZE = 12;
 
 function AdminPage() {
   const { user, loading, isAdmin, adminLoading } = useAuth();
@@ -69,6 +70,9 @@ function AdminPage() {
   const [orderDrafts, setOrderDrafts] = useState<Record<string, OrderDraft>>({});
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [orderQuery, setOrderQuery] = useState("");
+  const [inventoryQuery, setInventoryQuery] = useState("");
+  const [orderPage, setOrderPage] = useState(1);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [savingVariantId, setSavingVariantId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -90,7 +94,7 @@ function AdminPage() {
           "order_id,customer_name,customer_email,customer_phone,shipping_address,order_summary,total_items,total_price_egp,payment_method,status,tracking_number,payment_reference,created_at",
         )
         .order("created_at", { ascending: false })
-        .limit(12),
+        .limit(100),
       supabase
         .from("product_variants")
         .select(
@@ -176,6 +180,11 @@ function AdminPage() {
     saveOrder(orderId, { status });
   };
 
+  const updateOrderFilter = (status: string) => {
+    setOrderStatusFilter(status);
+    setOrderPage(1);
+  };
+
   const saveStock = async (variantId: string) => {
     const nextStock = Number(stockDrafts[variantId]);
     if (!Number.isInteger(nextStock) || nextStock < 0) {
@@ -225,14 +234,32 @@ function AdminPage() {
     const lowStock = inventory.filter(
       (variant) => variant.stock_quantity > 0 && variant.stock_quantity <= 3,
     );
-    const filteredOrders =
+    const actionOrders = orders.filter((order) => orderNeedsAction(order));
+    const statusFilteredOrders =
       orderStatusFilter === "all"
         ? orders
-        : orders.filter((order) => order.status === orderStatusFilter);
+        : orderStatusFilter === "needs_action"
+          ? actionOrders
+          : orders.filter((order) => order.status === orderStatusFilter);
+    const normalizedOrderQuery = orderQuery.trim().toLowerCase();
+    const filteredOrders = normalizedOrderQuery
+      ? statusFilteredOrders.filter((order) => orderMatchesQuery(order, normalizedOrderQuery))
+      : statusFilteredOrders;
+    const orderPageCount = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+    const safeOrderPage = Math.min(orderPage, orderPageCount);
+    const pagedOrders = filteredOrders.slice(
+      (safeOrderPage - 1) * PAGE_SIZE,
+      safeOrderPage * PAGE_SIZE,
+    );
+    const normalizedInventoryQuery = inventoryQuery.trim().toLowerCase();
+    const filteredInventory = normalizedInventoryQuery
+      ? inventory.filter((variant) => inventoryMatchesQuery(variant, normalizedInventoryQuery))
+      : inventory;
     const orderCounts = ORDER_STATUSES.reduce<Record<string, number>>((counts, status) => {
       counts[status] = orders.filter((order) => order.status === status).length;
       return counts;
     }, {});
+    orderCounts.needs_action = actionOrders.length;
 
     return {
       totalRevenue,
@@ -242,9 +269,13 @@ function AdminPage() {
       totalStock,
       lowStock,
       filteredOrders,
+      pagedOrders,
+      filteredInventory,
+      orderPageCount,
+      safeOrderPage,
       orderCounts,
     };
-  }, [revenue, inventory, orders, orderStatusFilter]);
+  }, [revenue, inventory, orders, orderStatusFilter, orderQuery, inventoryQuery, orderPage]);
 
   if (loading || adminLoading) {
     return (
@@ -339,6 +370,7 @@ function AdminPage() {
           />
           <Metric label="Stock units" value={String(summary.totalStock)} />
           <Metric label="Low stock" value={String(summary.lowStock.length)} />
+          <Metric label="Needs action" value={String(summary.orderCounts.needs_action ?? 0)} />
         </section>
 
         <section className="mt-10" style={primarySectionStyle}>
@@ -351,7 +383,7 @@ function AdminPage() {
                 <button
                   key={status}
                   type="button"
-                  onClick={() => setOrderStatusFilter(status)}
+                  onClick={() => updateOrderFilter(status)}
                   style={{
                     ...filterButtonStyle,
                     borderColor: active ? "#fff" : "#333",
@@ -359,10 +391,25 @@ function AdminPage() {
                     color: active ? "#000" : "#fff",
                   }}
                 >
-                  {status} ({count})
+                  {statusLabel(status)} ({count})
                 </button>
               );
             })}
+          </div>
+          <div className="mb-4">
+            <label className="jb-label" htmlFor="admin-order-search">
+              Search orders
+            </label>
+            <input
+              id="admin-order-search"
+              value={orderQuery}
+              onChange={(event) => {
+                setOrderQuery(event.target.value);
+                setOrderPage(1);
+              }}
+              className="jb-input"
+              placeholder="Order, customer, phone, product, address"
+            />
           </div>
           <div style={tableWrap}>
             <table style={orderTableStyle}>
@@ -380,7 +427,7 @@ function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {summary.filteredOrders.map((order) => {
+                {summary.pagedOrders.map((order) => {
                   const draft = orderDrafts[order.order_id] ?? {
                     status: order.status,
                     tracking_number: order.tracking_number ?? "",
@@ -487,6 +534,13 @@ function AdminPage() {
               </tbody>
             </table>
           </div>
+          <Pager
+            page={summary.safeOrderPage}
+            pageCount={summary.orderPageCount}
+            total={summary.filteredOrders.length}
+            onPrevious={() => setOrderPage((page) => Math.max(1, page - 1))}
+            onNext={() => setOrderPage((page) => Math.min(summary.orderPageCount, page + 1))}
+          />
         </section>
 
         <section className="mt-10">
@@ -517,6 +571,18 @@ function AdminPage() {
 
         <section className="mt-10">
           <SectionHeader eyebrow="Inventory" title="Manage stock" />
+          <div className="mb-4">
+            <label className="jb-label" htmlFor="admin-inventory-search">
+              Search inventory
+            </label>
+            <input
+              id="admin-inventory-search"
+              value={inventoryQuery}
+              onChange={(event) => setInventoryQuery(event.target.value)}
+              className="jb-input"
+              placeholder="Product, color, size, SKU"
+            />
+          </div>
           <div style={tableWrap}>
             <table style={inventoryTableStyle}>
               <thead>
@@ -531,7 +597,7 @@ function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {inventory.map((variant) => {
+                {summary.filteredInventory.map((variant) => {
                   const product = productFromVariant(variant);
                   const draft = stockDrafts[variant.id] ?? String(variant.stock_quantity ?? 0);
                   const changed = draft !== String(variant.stock_quantity ?? 0);
@@ -581,9 +647,11 @@ function AdminPage() {
                     </tr>
                   );
                 })}
-                {inventory.length === 0 && (
+                {summary.filteredInventory.length === 0 && (
                   <tr>
-                    <Td colSpan={7}>No inventory yet</Td>
+                    <Td colSpan={7}>
+                      {inventory.length === 0 ? "No inventory yet" : "No inventory matches search"}
+                    </Td>
                   </tr>
                 )}
               </tbody>
@@ -613,6 +681,49 @@ function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
     <div style={{ marginBottom: 14 }}>
       <div className="jb-eyebrow">{eyebrow}</div>
       <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 400, marginTop: 6 }}>{title}</h2>
+    </div>
+  );
+}
+
+function Pager({
+  page,
+  pageCount,
+  total,
+  onPrevious,
+  onNext,
+}: {
+  page: number;
+  pageCount: number;
+  total: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  if (pageCount <= 1) return null;
+  return (
+    <div className="mt-4 flex items-center justify-between gap-3 flex-wrap" style={mutedText}>
+      <span>
+        Page {page} of {pageCount} · {total} orders
+      </span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          className="jb-btn-ghost"
+          onClick={onPrevious}
+          disabled={page <= 1}
+          style={{ minHeight: 36, padding: "0 12px" }}
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          className="jb-btn-ghost"
+          onClick={onNext}
+          disabled={page >= pageCount}
+          style={{ minHeight: 36, padding: "0 12px" }}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }
@@ -654,6 +765,42 @@ function paymentMethodLabel(value: string | null) {
   if (value === "cod") return "Cash on delivery";
   if (value === "instapay") return "InstaPay";
   return value || "Not set";
+}
+
+function statusLabel(status: string) {
+  if (status === "needs_action") return "needs action";
+  return status;
+}
+
+function orderNeedsAction(order: AdminOrderRow) {
+  return (
+    order.status === "pending" ||
+    order.status === "confirmed" ||
+    (order.status === "paid" && !order.tracking_number)
+  );
+}
+
+function orderMatchesQuery(order: AdminOrderRow, query: string) {
+  return [
+    order.order_id,
+    order.customer_name,
+    order.customer_email,
+    order.customer_phone,
+    order.shipping_address,
+    order.order_summary,
+    order.payment_reference,
+    order.tracking_number,
+    order.status,
+  ]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(query));
+}
+
+function inventoryMatchesQuery(variant: AdminInventoryRow, query: string) {
+  const product = productFromVariant(variant);
+  return [product?.name, product?.gender, variant.color, variant.size, variant.sku]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(query));
 }
 
 function orderSummaryLines(value: string | null) {

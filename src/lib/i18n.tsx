@@ -142,6 +142,35 @@ const DICT: Dict = {
   "cart.total": { en: "Total", ar: "الإجمالي" },
   "cart.savings": { en: "Total savings", ar: "إجمالي التوفير" },
   "cart.questions": { en: "Questions?", ar: "هل لديك سؤال؟" },
+  "cart.deliveryTrust": {
+    en: "Cairo/Giza delivery usually arrives in 2-4 business days. Other governorates may take longer.",
+    ar: "عادةً يصل التوصيل داخل القاهرة والجيزة خلال 2-4 أيام عمل. قد تستغرق المحافظات الأخرى وقتاً أطول.",
+  },
+  "cart.returnTrust": {
+    en: "Exchange or return within 14 days if the item is unused and in original condition.",
+    ar: "يمكن الاستبدال أو الإرجاع خلال 14 يوماً إذا كانت القطعة غير مستخدمة وبحالتها الأصلية.",
+  },
+  "cart.supportTrust": {
+    en: "Need help with sizing or payment? Contact us before placing the order.",
+    ar: "تحتاج مساعدة في المقاس أو الدفع؟ تواصل معنا قبل تأكيد الطلب.",
+  },
+  "cart.stockChanged": {
+    en: "Some cart items changed stock. Please review quantities before placing the order.",
+    ar: "تغير توفر بعض المنتجات في حقيبتك. راجع الكميات قبل تأكيد الطلب.",
+  },
+  "cart.stockUnavailable": {
+    en: "is no longer available in the selected option.",
+    ar: "لم يعد متاحاً بالخيار المحدد.",
+  },
+  "cart.stockOnly": {
+    en: "has only",
+    ar: "متوفر منه فقط",
+  },
+  "cart.stockUnits": { en: "left.", ar: "قطعة." },
+  "cart.orderFailed": {
+    en: "We could not place the order. Please review your bag or contact support.",
+    ar: "لم نتمكن من تأكيد الطلب. راجع الحقيبة أو تواصل مع الدعم.",
+  },
   "cart.orderSummary": { en: "Order summary", ar: "ملخص الطلب" },
   "cart.offerEnds": { en: "Active offer ends in", ar: "ينتهي العرض خلال" },
   "cart.promo": { en: "Promo code", ar: "كود الخصم" },

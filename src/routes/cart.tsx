@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
-import { useCart } from "@/lib/cart";
+import { useCart, type CartItem } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import {
   supabase,
@@ -58,6 +58,61 @@ const empty: FormState = {
   city: "",
   governorate: "",
 };
+
+type Translate = (key: string) => string;
+
+async function validateCartStock(items: CartItem[], t: Translate) {
+  const variantIds = items.map((item) => item.variantId).filter(Boolean) as string[];
+  const itemIds = items.filter((item) => !item.variantId).map((item) => item.id);
+
+  const [variantResult, itemResult] = await Promise.all([
+    variantIds.length
+      ? supabase.from("product_variants").select("id,stock_quantity").in("id", variantIds)
+      : Promise.resolve({ data: [], error: null }),
+    itemIds.length
+      ? supabase.from("items").select("id,stock_quantity,sold_out").in("id", itemIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (variantResult.error || itemResult.error) return null;
+
+  const variantStock = new Map(
+    ((variantResult.data as { id: string; stock_quantity: number }[]) || []).map((row) => [
+      row.id,
+      row.stock_quantity,
+    ]),
+  );
+  const itemStock = new Map(
+    ((itemResult.data as { id: string; stock_quantity: number; sold_out: boolean }[]) || []).map(
+      (row) => [row.id, row.sold_out ? 0 : row.stock_quantity],
+    ),
+  );
+
+  for (const item of items) {
+    const available = item.variantId ? variantStock.get(item.variantId) : itemStock.get(item.id);
+    if (available === undefined) continue;
+    if (available <= 0) return `${item.name} ${t("cart.stockUnavailable")}`;
+    if (item.quantity > available) {
+      return `${item.name} ${t("cart.stockOnly")} ${available} ${t("cart.stockUnits")}`;
+    }
+  }
+
+  return null;
+}
+
+function friendlyOrderError(message: string, t: Translate) {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("stock") ||
+    lower.includes("sold out") ||
+    lower.includes("not enough") ||
+    lower.includes("available")
+  ) {
+    return t("cart.stockChanged");
+  }
+  if (lower.includes("offer") || lower.includes("promo")) return message;
+  return t("cart.orderFailed");
+}
 
 function CartPage() {
   const { items, removeItem, updateQty, subtotal, clear } = useCart();
@@ -220,6 +275,12 @@ function CartPage() {
     }
     setSubmitting(true);
     try {
+      const stockError = await validateCartStock(items, t);
+      if (stockError) {
+        setError(stockError);
+        return;
+      }
+
       const latestOffers = await fetchOffers();
       const latestFirstOrderEligible = await getFirstOrderEligible(user);
       const submittedTotals = calculateOfferTotals(
@@ -277,7 +338,7 @@ function CartPage() {
       const { data: orderIdData, error: placeOrderError } = await supabase.rpc("place_order", {
         p_order: orderPayload,
       });
-      if (placeOrderError) throw new Error("Could not place order: " + placeOrderError.message);
+      if (placeOrderError) throw new Error(friendlyOrderError(placeOrderError.message, t));
       const orderId = orderIdData as string;
 
       if (user && savePrefs) {
@@ -324,7 +385,7 @@ function CartPage() {
       clear();
       navigate({ to: "/confirmation", search: { order_id: orderId } as never });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to place order.");
+      setError(err instanceof Error ? err.message : t("cart.orderFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -686,6 +747,15 @@ function CartPage() {
                 : t("pay.cod.full")}
             </div>
 
+            <div
+              className="mt-4 space-y-2"
+              style={{ fontSize: 12, color: "#bdbdbd", lineHeight: 1.55 }}
+            >
+              <TrustLine>{t("cart.deliveryTrust")}</TrustLine>
+              <TrustLine>{t("cart.returnTrust")}</TrustLine>
+              <TrustLine>{t("cart.supportTrust")}</TrustLine>
+            </div>
+
             <button type="submit" disabled={submitting} className="jb-btn w-full mt-6">
               {submitting ? t("form.placing") : t("form.place")}
             </button>
@@ -704,6 +774,17 @@ function CartPage() {
         </form>
       </div>
     </Layout>
+  );
+}
+
+function TrustLine({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex gap-2">
+      <span aria-hidden="true" style={{ color: "#fff" }}>
+        -
+      </span>
+      <span>{children}</span>
+    </div>
   );
 }
 
