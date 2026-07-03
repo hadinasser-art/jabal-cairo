@@ -45,10 +45,20 @@ function RegisterPage() {
     setErr(null);
     setMsg(null);
     setBusy(true);
+    const cleanFirstName = firstName.trim();
+    const cleanLastName = lastName.trim();
+    const cleanEmail = email.trim();
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
-      options: { emailRedirectTo: window.location.origin + "/auth/callback" },
+      options: {
+        emailRedirectTo: window.location.origin + "/auth/callback",
+        data: {
+          first_name: cleanFirstName,
+          last_name: cleanLastName,
+          full_name: [cleanFirstName, cleanLastName].filter(Boolean).join(" "),
+        },
+      },
     });
     setBusy(false);
     if (error) {
@@ -58,9 +68,9 @@ function RegisterPage() {
     if (data.user) {
       await upsertProfile({
         user_id: data.user.id,
-        first_name: firstName || null,
-        last_name: lastName || null,
-        email,
+        first_name: cleanFirstName || null,
+        last_name: cleanLastName || null,
+        email: cleanEmail,
         phone: null,
         full_address: null,
         city: null,

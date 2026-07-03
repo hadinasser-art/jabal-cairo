@@ -20,8 +20,8 @@ function CallbackPage() {
         const [first = "", ...rest] = full.split(" ");
         await upsertProfile({
           user_id: u.id,
-          first_name: meta.given_name || first || null,
-          last_name: meta.family_name || rest.join(" ") || null,
+          first_name: meta.first_name || meta.given_name || first || null,
+          last_name: meta.last_name || meta.family_name || rest.join(" ") || null,
           email: u.email || null,
           phone: null,
           full_address: null,

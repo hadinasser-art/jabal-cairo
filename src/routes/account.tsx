@@ -57,19 +57,28 @@ function AccountPage() {
       navigate({ to: "/login" });
       return;
     }
-    loadProfile(user.id).then((p) => {
-      setProfile(
-        p ?? {
-          user_id: user.id,
-          first_name: null,
-          last_name: null,
-          email: user.email ?? null,
-          phone: null,
-          full_address: null,
-          city: null,
-          governorate: null,
-        },
-      );
+    loadProfile(user.id).then(async (p) => {
+      if (p) {
+        setProfile(p);
+        return;
+      }
+
+      const meta = (user.user_metadata || {}) as Record<string, string>;
+      const full = meta.full_name || meta.name || "";
+      const [first = "", ...rest] = full.split(" ");
+      const nextProfile = {
+        user_id: user.id,
+        first_name: meta.first_name || meta.given_name || first || null,
+        last_name: meta.last_name || meta.family_name || rest.join(" ") || null,
+        email: user.email ?? null,
+        phone: null,
+        full_address: null,
+        city: null,
+        governorate: null,
+      };
+
+      setProfile(nextProfile);
+      await upsertProfile(nextProfile);
     });
     supabase
       .from("combined_orders")
