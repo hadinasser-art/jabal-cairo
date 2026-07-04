@@ -65,21 +65,113 @@ export async function fetchItemsByGender(target: Gender): Promise<Item[]> {
 
 export async function fetchFeaturedItems(limit = 8): Promise<Item[]> {
   const all = await fetchAllItems();
-  const featured = await Promise.all(
-    all.map(async (item) => {
-      const config = await fetchProductMediaConfig(item);
-      return sortItemColors(item).map((color) => ({
-        ...item,
-        color: [color],
-        image_url: getProductColorImage(item, color, config),
-        display_color: color,
-        display_image_url: getProductColorImage(item, color, config),
-        display_key: `${item.id}:${color}`,
-      }));
-    }),
+  const [featured, purchaseCounts] = await Promise.all([
+    Promise.all(
+      all.map(async (item) => {
+        const config = await fetchProductMediaConfig(item);
+        return sortItemColors(item).map((color) => ({
+          ...item,
+          color: [color],
+          image_url: getProductColorImage(item, color, config),
+          display_color: color,
+          display_image_url: getProductColorImage(item, color, config),
+          display_key: `${item.id}:${color}`,
+        }));
+      }),
+    ),
+    fetchPurchaseCounts(),
+  ]);
+
+  const items = featured.flat();
+  if (!purchaseCounts.hasPurchases) return shuffleItems(items).slice(0, limit);
+
+  const ranked = items.map((item) => ({
+    item,
+    purchaseCount: getPurchaseCount(item, purchaseCounts),
+  }));
+  const bought = ranked
+    .filter(({ purchaseCount }) => purchaseCount > 0)
+    .sort(
+      (a, b) =>
+        b.purchaseCount - a.purchaseCount ||
+        new Date(b.item.created_at).getTime() - new Date(a.item.created_at).getTime(),
+    )
+    .map(({ item }) => item);
+  const fallback = shuffleItems(
+    ranked.filter(({ purchaseCount }) => purchaseCount === 0).map(({ item }) => item),
   );
 
-  return featured.flat().slice(0, limit);
+  return [...bought, ...fallback].slice(0, limit);
+}
+
+type PurchaseCounts = {
+  hasPurchases: boolean;
+  items: Map<string, number>;
+  itemColors: Map<string, number>;
+  itemsWithColorCounts: Set<string>;
+};
+
+type PurchaseCountRow = {
+  item_id: string;
+  selected_color: string | null;
+  purchase_count: number | string;
+};
+
+async function fetchPurchaseCounts(): Promise<PurchaseCounts> {
+  const empty = {
+    hasPurchases: false,
+    items: new Map<string, number>(),
+    itemColors: new Map<string, number>(),
+    itemsWithColorCounts: new Set<string>(),
+  };
+
+  try {
+    const { data, error } = await withTimeout(
+      supabase.rpc("get_item_purchase_counts").returns<PurchaseCountRow[]>(),
+    );
+    if (error) {
+      console.warn("get_item_purchase_counts", error.message);
+      return empty;
+    }
+
+    const counts = {
+      hasPurchases: false,
+      items: new Map<string, number>(),
+      itemColors: new Map<string, number>(),
+      itemsWithColorCounts: new Set<string>(),
+    };
+
+    for (const row of data ?? []) {
+      const count = Number(row.purchase_count || 0);
+      if (!row.item_id || count <= 0) continue;
+      counts.hasPurchases = true;
+      counts.items.set(row.item_id, (counts.items.get(row.item_id) ?? 0) + count);
+      if (row.selected_color) {
+        const key = colorPurchaseKey(row.item_id, row.selected_color);
+        counts.itemColors.set(key, (counts.itemColors.get(key) ?? 0) + count);
+        counts.itemsWithColorCounts.add(row.item_id);
+      }
+    }
+
+    return counts;
+  } catch (error) {
+    console.warn(
+      "get_item_purchase_counts",
+      error instanceof Error ? error.message : "Purchase counts failed",
+    );
+    return empty;
+  }
+}
+
+function getPurchaseCount(item: Item, counts: PurchaseCounts) {
+  if (item.display_color && counts.itemsWithColorCounts.has(item.id)) {
+    return counts.itemColors.get(colorPurchaseKey(item.id, item.display_color)) ?? 0;
+  }
+  return counts.items.get(item.id) ?? 0;
+}
+
+function colorPurchaseKey(itemId: string, color: string) {
+  return `${itemId}:${color.trim().toLowerCase()}`;
 }
 
 function sortItemColors(item: Item) {
@@ -93,4 +185,13 @@ function sortItemColors(item: Item) {
     const bSort = bIndex === -1 ? colorOrder.length : bIndex;
     return aSort - bSort || a.localeCompare(b);
   });
+}
+
+function shuffleItems(items: Item[]) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
 }
