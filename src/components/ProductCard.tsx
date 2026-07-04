@@ -18,7 +18,12 @@ export function ProductCard({ item }: { item: Item }) {
 
   return (
     <div className="pc group">
-      <Link to="/product/$id" params={{ id: item.id }} style={{ display: "block" }}>
+      <Link
+        to="/product/$id"
+        params={{ id: item.id }}
+        search={item.display_color ? { color: item.display_color } : {}}
+        style={{ display: "block" }}
+      >
         <div className="pc-img-wrap">
           {imageUrl ? (
             <img src={imageUrl} alt={item.name} className="pc-img" loading="lazy" />
@@ -72,11 +77,13 @@ export function ProductCard({ item }: { item: Item }) {
 }
 
 function getCardImageUrl(item: Item) {
+  if (item.display_image_url) return item.display_image_url;
   if (item.id === OVERSIZED_TSHIRT_PRODUCT_ID) return OVERSIZED_TSHIRT_CARD_IMAGE_URL;
   return item.image_url;
 }
 
 function sortCardColors(item: Item) {
+  if (item.display_color) return [item.display_color];
   const colors = item.color || [];
   const colorOrder =
     item.color_order ||

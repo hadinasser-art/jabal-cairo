@@ -23,7 +23,8 @@ type OrderRow = {
   order_id: string;
   created_at: string;
   total_price_egp: number;
-  status: string;
+  payment_status: string;
+  order_status: string;
   order_summary: string;
 };
 
@@ -82,7 +83,7 @@ function AccountPage() {
     });
     supabase
       .from("combined_orders")
-      .select("order_id,created_at,total_price_egp,status,order_summary")
+      .select("order_id,created_at,total_price_egp,payment_status,order_status,order_summary")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .then(({ data }) => setOrders((data as OrderRow[]) || []));
@@ -289,7 +290,8 @@ function AccountPage() {
                       }}
                     >
                       {new Date(o.created_at).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}{" "}
-                      · {o.status}
+                      · {t("status.payment")} {statusLabel(o.payment_status)} · {t("status.order")}{" "}
+                      {statusLabel(o.order_status)}
                     </div>
                     <div style={{ fontSize: 12, color: "#9a9a9a", marginTop: 6, lineHeight: 1.5 }}>
                       {o.order_summary}
@@ -313,6 +315,10 @@ function AccountPage() {
       </div>
     </Layout>
   );
+}
+
+function statusLabel(status: string) {
+  return status.replace(/_/g, " ");
 }
 
 function FavoriteItem({ favorite }: { favorite: FavoriteRow }) {

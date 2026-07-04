@@ -26,8 +26,22 @@ import { ProductCard } from "@/components/ProductCard";
 import { OfferCountdown } from "@/components/OfferCountdown";
 import { fetchOffers, type Offer } from "@/lib/offer";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { useAuth } from "@/lib/auth";
+import {
+  fetchApprovedProductReviews,
+  fetchReviewEligiblePurchases,
+  reviewPhotoRules,
+  reviewSummary,
+  submitProductReview,
+  uploadReviewPhotos,
+  type ProductReview,
+  type ReviewEligiblePurchase,
+} from "@/lib/reviews";
 
 export const Route = createFileRoute("/product/$id")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    color: typeof search.color === "string" ? search.color : null,
+  }),
   component: ProductPage,
 });
 
@@ -45,15 +59,46 @@ function compareVariantOptions(config: ProductMediaConfig, a: ProductVariant, b:
   );
 }
 
+function dateLabel(value: string | null) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(
+    new Date(value),
+  );
+}
+
+const reviewMutedText = {
+  color: "#9a9a9a",
+  fontSize: 13,
+  lineHeight: 1.5,
+};
+
+const reviewNoticeStyle = {
+  border: "1px solid #262626",
+  padding: "10px 12px",
+  color: "#fff",
+  fontSize: 12,
+  lineHeight: 1.45,
+  marginBottom: 12,
+};
+
+function getRequestedProductColor(item: Item, requestedColor: string | null) {
+  if (!requestedColor) return null;
+  return item.color?.find((color) => color.toLowerCase() === requestedColor.toLowerCase()) ?? null;
+}
+
 function ProductPage() {
   const { id } = Route.useParams();
+  const { color: requestedColor } = Route.useSearch();
   const navigate = useNavigate();
   const { addItem } = useCart();
   const { t } = useI18n();
+  const { user } = useAuth();
   const [item, setItem] = useState<Item | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [mediaConfig, setMediaConfig] = useState<ProductMediaConfig | null>(null);
   const [related, setRelated] = useState<Item[]>([]);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [eligiblePurchases, setEligiblePurchases] = useState<ReviewEligiblePurchase[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [size, setSize] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
@@ -62,10 +107,23 @@ function ProductPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [galleryTouchStart, setGalleryTouchStart] = useState<number | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewName, setReviewName] = useState("");
+  const [reviewText, setReviewText] = useState("");
+  const [reviewFiles, setReviewFiles] = useState<File[]>([]);
+  const [reviewOrderId, setReviewOrderId] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOffers().then(setOffers);
   }, []);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    setReviewName((current) => current || user.email?.split("@")[0] || "");
+  }, [user]);
 
   useEffect(() => {
     setGalleryIndex(0);
@@ -76,6 +134,9 @@ function ProductPage() {
     setErr(null);
     setVariants([]);
     setMediaConfig(null);
+    setReviews([]);
+    setEligiblePurchases([]);
+    setReviewOrderId("");
     supabase
       .from("items")
       .select("*")
@@ -88,15 +149,21 @@ function ProductPage() {
           setItem(it);
           if (it) {
             const fallbackConfig = getFallbackProductMediaConfig(it);
+            const initialColor = getRequestedProductColor(it, requestedColor);
             setMediaConfig(fallbackConfig);
             setSize(it.size && it.size.length === 1 ? it.size[0] : null);
-            setColor(getInitialProductColor(it, fallbackConfig));
+            setColor(initialColor ?? getInitialProductColor(it, fallbackConfig));
             fetchProductMediaConfig(it).then((config) => {
               setMediaConfig(config);
               setVariants((current) =>
                 [...current].sort((a, b) => compareVariantOptions(config, a, b)),
               );
-              setColor((current) => current ?? getInitialProductColor(it, config));
+              setColor(
+                (current) =>
+                  getRequestedProductColor(it, requestedColor) ||
+                  current ||
+                  getInitialProductColor(it, config),
+              );
             });
             supabase
               .from("product_variants")
@@ -114,7 +181,12 @@ function ProductPage() {
                 if (rows.length > 0) {
                   const firstAvailable =
                     rows.find((variant) => variant.stock_quantity > 0) || rows[0];
-                  setColor((current) => current ?? firstAvailable.color);
+                  setColor(
+                    (current) =>
+                      getRequestedProductColor(it, requestedColor) ||
+                      current ||
+                      firstAvailable.color,
+                  );
                 }
               });
             if (it.category) {
@@ -129,7 +201,35 @@ function ProductPage() {
           }
         }
       });
-  }, [id]);
+  }, [id, requestedColor]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchApprovedProductReviews(id)
+      .then((nextReviews) => {
+        if (!cancelled) setReviews(nextReviews);
+      })
+      .catch((error) => {
+        if (!cancelled) console.warn("product reviews", error.message);
+      });
+
+    if (user) {
+      fetchReviewEligiblePurchases(id)
+        .then((purchases) => {
+          if (cancelled) return;
+          setEligiblePurchases(purchases);
+          setReviewOrderId((current) => current || purchases[0]?.order_id || "");
+        })
+        .catch((error) => {
+          if (!cancelled) console.warn("review eligibility", error.message);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, user]);
 
   if (err)
     return (
@@ -240,6 +340,73 @@ function ProductPage() {
     });
     notifyAddedToBag({ name: item.name, size, color, onView: () => navigate({ to: "/cart" }), t });
   };
+
+  const handleReviewSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!user) {
+      setReviewError("Log in to review your purchase.");
+      return;
+    }
+    const selectedPurchase =
+      eligiblePurchases.find((purchase) => purchase.order_id === reviewOrderId) ||
+      eligiblePurchases[0];
+    if (!selectedPurchase) {
+      setReviewError("Only verified buyers can review this product.");
+      return;
+    }
+
+    setReviewError(null);
+    setReviewMessage(null);
+    setReviewSubmitting(true);
+    try {
+      const photoPaths = await uploadReviewPhotos(user.id, reviewFiles);
+      await submitProductReview({
+        itemId: item.id,
+        variantId: selectedPurchase.variant_id,
+        orderId: selectedPurchase.order_id,
+        rating: reviewRating,
+        reviewText,
+        displayName: reviewName,
+        photoPaths,
+      });
+      setReviewMessage("Thanks. Your review is waiting for approval.");
+      setReviewText("");
+      setReviewFiles([]);
+      setReviewRating(5);
+      const [nextReviews, nextPurchases] = await Promise.all([
+        fetchApprovedProductReviews(item.id),
+        fetchReviewEligiblePurchases(item.id),
+      ]);
+      setReviews(nextReviews);
+      setEligiblePurchases(nextPurchases);
+      setReviewOrderId(nextPurchases[0]?.order_id || "");
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : "Review could not be submitted.");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const selectedColorReviews = color
+    ? [
+        ...reviews.filter((review) => review.selected_color === color),
+        ...reviews.filter((review) => review.selected_color !== color),
+      ]
+    : reviews;
+  const selectedReviewSummary = reviewSummary(selectedColorReviews);
+  const approvedReviewPhotos = selectedColorReviews.flatMap((review) =>
+    (review.product_review_photos || [])
+      .filter((photo) => photo.status === "approved" && photo.signed_url)
+      .map((photo) => ({ ...photo, review })),
+  );
+  const activeEligiblePurchases = color
+    ? eligiblePurchases.filter(
+        (purchase) => !purchase.selected_color || purchase.selected_color === color,
+      )
+    : eligiblePurchases;
+  const reviewPurchaseOptions =
+    activeEligiblePurchases.length > 0 ? activeEligiblePurchases : eligiblePurchases;
+  const photoRules = reviewPhotoRules();
 
   return (
     <Layout>
@@ -658,6 +825,222 @@ function ProductPage() {
           )}
         </div>
       </div>
+
+      <section className="px-6 md:px-12 py-16 max-w-7xl mx-auto w-full">
+        <div className="flex items-end justify-between gap-4 flex-wrap mb-8">
+          <div>
+            <div className="jb-eyebrow">Customer reviews</div>
+            <h2 style={{ color: "#fff", fontSize: 24, fontWeight: 300, marginTop: 8 }}>
+              Real-life fit and color
+            </h2>
+          </div>
+          <div style={{ color: "#fff", textAlign: "right" }}>
+            <div style={{ fontSize: 22, fontWeight: 300 }}>
+              {selectedReviewSummary.count > 0
+                ? `${selectedReviewSummary.average.toFixed(1)} / 5`
+                : "No reviews yet"}
+            </div>
+            <div style={{ ...reviewMutedText, marginTop: 4 }}>
+              {selectedReviewSummary.count} review
+              {selectedReviewSummary.count === 1 ? "" : "s"} · {selectedReviewSummary.photoCount}{" "}
+              photo{selectedReviewSummary.photoCount === 1 ? "" : "s"}
+            </div>
+          </div>
+        </div>
+
+        {approvedReviewPhotos.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-10">
+            {approvedReviewPhotos.slice(0, 6).map((photo) => (
+              <div
+                key={photo.id}
+                style={{ background: "#141414", aspectRatio: "1 / 1", overflow: "hidden" }}
+              >
+                <img
+                  src={photo.signed_url || ""}
+                  alt={`${item.name} customer photo`}
+                  loading="lazy"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-[1fr_360px] gap-8">
+          <div style={{ borderTop: "1px solid #262626" }}>
+            {selectedColorReviews.map((review) => (
+              <article
+                key={review.id}
+                style={{ borderBottom: "1px solid #262626", padding: "22px 0" }}
+              >
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <div style={{ color: "#fff", fontSize: 15 }}>
+                      {"★".repeat(review.rating)}
+                      <span style={{ color: "#444" }}>{"★".repeat(5 - review.rating)}</span>
+                    </div>
+                    <div style={{ color: "#fff", marginTop: 8 }}>{review.display_name}</div>
+                    <div style={{ ...reviewMutedText, marginTop: 3 }}>
+                      Verified buyer
+                      {review.selected_color ? ` · ${review.selected_color}` : ""}
+                      {review.selected_size ? ` · ${review.selected_size}` : ""}
+                    </div>
+                  </div>
+                  <div style={reviewMutedText}>{dateLabel(review.created_at)}</div>
+                </div>
+                <p style={{ color: "#d8d8d8", lineHeight: 1.7, marginTop: 14 }}>
+                  {review.review_text}
+                </p>
+                {(review.product_review_photos || []).filter(
+                  (photo) => photo.status === "approved" && photo.signed_url,
+                ).length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-4">
+                    {(review.product_review_photos || [])
+                      .filter((photo) => photo.status === "approved" && photo.signed_url)
+                      .map((photo) => (
+                        <img
+                          key={photo.id}
+                          src={photo.signed_url || ""}
+                          alt={`${item.name} review photo`}
+                          loading="lazy"
+                          style={{
+                            width: 86,
+                            height: 86,
+                            objectFit: "cover",
+                            background: "#141414",
+                          }}
+                        />
+                      ))}
+                  </div>
+                )}
+              </article>
+            ))}
+            {selectedColorReviews.length === 0 && (
+              <div
+                style={{ color: "#9a9a9a", padding: "24px 0", borderBottom: "1px solid #262626" }}
+              >
+                No approved reviews yet.
+              </div>
+            )}
+          </div>
+
+          <div style={{ border: "1px solid #262626", padding: 18, alignSelf: "start" }}>
+            <div className="jb-eyebrow">Share yours</div>
+            <h3 style={{ color: "#fff", fontSize: 18, fontWeight: 400, marginTop: 8 }}>
+              Review this product
+            </h3>
+            {!user ? (
+              <div style={{ marginTop: 16 }}>
+                <p style={reviewMutedText}>Log in after buying to leave a verified review.</p>
+                <Link to="/login" className="jb-btn-ghost mt-4" style={{ width: "100%" }}>
+                  Log in
+                </Link>
+              </div>
+            ) : reviewPurchaseOptions.length === 0 ? (
+              <p style={{ ...reviewMutedText, marginTop: 16 }}>
+                Reviews open after a paid, shipped, or delivered order for this product.
+              </p>
+            ) : (
+              <form onSubmit={handleReviewSubmit} style={{ marginTop: 16 }}>
+                {reviewPurchaseOptions.length > 1 && (
+                  <div className="mb-4">
+                    <label className="jb-label" htmlFor="review-order">
+                      Purchased option
+                    </label>
+                    <select
+                      id="review-order"
+                      value={reviewOrderId}
+                      onChange={(event) => setReviewOrderId(event.target.value)}
+                      className="jb-input"
+                    >
+                      {reviewPurchaseOptions.map((purchase) => (
+                        <option
+                          key={`${purchase.order_id}-${purchase.variant_id}`}
+                          value={purchase.order_id}
+                        >
+                          {[purchase.selected_color, purchase.selected_size, purchase.order_id]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div className="mb-4">
+                  <label className="jb-label" htmlFor="review-name">
+                    Display name
+                  </label>
+                  <input
+                    id="review-name"
+                    value={reviewName}
+                    onChange={(event) => setReviewName(event.target.value)}
+                    className="jb-input"
+                    required
+                    maxLength={80}
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="jb-label" htmlFor="review-rating">
+                    Rating
+                  </label>
+                  <select
+                    id="review-rating"
+                    value={reviewRating}
+                    onChange={(event) => setReviewRating(Number(event.target.value))}
+                    className="jb-input"
+                  >
+                    {[5, 4, 3, 2, 1].map((rating) => (
+                      <option key={rating} value={rating}>
+                        {rating} star{rating === 1 ? "" : "s"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="jb-label" htmlFor="review-text">
+                    Review
+                  </label>
+                  <textarea
+                    id="review-text"
+                    value={reviewText}
+                    onChange={(event) => setReviewText(event.target.value)}
+                    className="jb-textarea"
+                    minLength={12}
+                    maxLength={1200}
+                    required
+                    placeholder="How did the color, fit, and fabric feel in real life?"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="jb-label" htmlFor="review-photos">
+                    Photos optional
+                  </label>
+                  <input
+                    id="review-photos"
+                    type="file"
+                    accept={photoRules.mimeTypes.join(",")}
+                    multiple
+                    onChange={(event) =>
+                      setReviewFiles(
+                        Array.from(event.target.files || []).slice(0, photoRules.maxCount),
+                      )
+                    }
+                    className="jb-input"
+                  />
+                  <div style={{ ...reviewMutedText, marginTop: 6 }}>
+                    Up to {photoRules.maxCount} photos, 5MB each.
+                  </div>
+                </div>
+                {reviewError && <div style={reviewNoticeStyle}>{reviewError}</div>}
+                {reviewMessage && <div style={reviewNoticeStyle}>{reviewMessage}</div>}
+                <button className="jb-btn w-full" type="submit" disabled={reviewSubmitting}>
+                  {reviewSubmitting ? "Submitting" : "Submit for approval"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </section>
 
       {related.length > 0 && (
         <section className="px-6 md:px-12 py-20 max-w-7xl mx-auto w-full">

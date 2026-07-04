@@ -49,6 +49,9 @@ export type Item = {
   created_at: string;
   gender?: Gender | null;
   color_order?: string[] | null;
+  display_color?: string | null;
+  display_image_url?: string | null;
+  display_key?: string | null;
 };
 
 export type ProductVariant = {
@@ -82,7 +85,8 @@ export type Order = {
   item_name: string;
   quantity: number;
   total_price_egp: number;
-  status: string;
+  payment_status: string;
+  order_status: string;
   created_at: string;
   user_id?: string | null;
 };

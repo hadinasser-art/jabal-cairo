@@ -1,4 +1,5 @@
 import { supabase, type Item, inferGender, type Gender } from "./supabase";
+import { fetchProductMediaConfig, getProductColorImage } from "./product-media";
 
 let cache: Item[] | null = null;
 let inFlight: Promise<Item[]> | null = null;
@@ -62,7 +63,34 @@ export async function fetchItemsByGender(target: Gender): Promise<Item[]> {
   });
 }
 
-export async function fetchFeaturedItems(limit = 4): Promise<Item[]> {
+export async function fetchFeaturedItems(limit = 8): Promise<Item[]> {
   const all = await fetchAllItems();
-  return all.slice(0, limit);
+  const featured = await Promise.all(
+    all.map(async (item) => {
+      const config = await fetchProductMediaConfig(item);
+      return sortItemColors(item).map((color) => ({
+        ...item,
+        color: [color],
+        image_url: getProductColorImage(item, color, config),
+        display_color: color,
+        display_image_url: getProductColorImage(item, color, config),
+        display_key: `${item.id}:${color}`,
+      }));
+    }),
+  );
+
+  return featured.flat().slice(0, limit);
+}
+
+function sortItemColors(item: Item) {
+  const colors = item.color || [];
+  const colorOrder = item.color_order || [];
+  if (colorOrder.length === 0) return colors;
+  return [...colors].sort((a, b) => {
+    const aIndex = colorOrder.indexOf(a);
+    const bIndex = colorOrder.indexOf(b);
+    const aSort = aIndex === -1 ? colorOrder.length : aIndex;
+    const bSort = bIndex === -1 ? colorOrder.length : bIndex;
+    return aSort - bSort || a.localeCompare(b);
+  });
 }

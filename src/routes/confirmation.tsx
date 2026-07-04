@@ -29,6 +29,8 @@ type StoredOrder = {
   shipping_fee?: number;
   total: number;
   payment_method?: "cod" | "instapay";
+  payment_status?: string;
+  order_status?: string;
 };
 
 function ConfirmationPage() {
@@ -58,6 +60,8 @@ function ConfirmationPage() {
   };
 
   const isInstapay = stored?.payment_method === "instapay";
+  const paymentStatus = stored?.payment_status ?? (isInstapay ? "pending" : "cod_pending");
+  const orderStatus = stored?.order_status ?? (isInstapay ? "new" : "confirmed");
 
   return (
     <Layout>
@@ -120,6 +124,10 @@ function ConfirmationPage() {
           </div>
           <div style={{ marginTop: 12, fontSize: 16, lineHeight: 1.6 }}>
             {isInstapay ? t("pay.instapay.note") : t("pay.cod.note")}
+          </div>
+          <div style={{ marginTop: 18, fontSize: 12, letterSpacing: "0.08em" }}>
+            {t("status.payment")}: {statusLabel(paymentStatus)} · {t("status.order")}:{" "}
+            {statusLabel(orderStatus)}
           </div>
         </div>
 
@@ -236,4 +244,8 @@ function ConfirmationPage() {
       </div>
     </Layout>
   );
+}
+
+function statusLabel(status: string) {
+  return status.replace(/_/g, " ");
 }

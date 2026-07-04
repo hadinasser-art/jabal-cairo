@@ -328,7 +328,8 @@ function CartPage() {
         discount_egp: submittedTotals.discountTotal,
         total_price_egp: submittedTotals.total,
         payment_method: payment,
-        status: "pending",
+        payment_status: payment === "instapay" ? "pending" : "cod_pending",
+        order_status: payment === "instapay" ? "new" : "confirmed",
         user_id: user?.id ?? null,
         offer_id: submittedAppliedOffers[0]?.offer.id ?? null,
         discount_amount_egp: submittedTotals.discountTotal,
@@ -386,6 +387,8 @@ function CartPage() {
             shipping_fee: submittedTotals.shippingFee,
             total: submittedTotals.total,
             payment_method: payment,
+            payment_status: payment === "instapay" ? "pending" : "cod_pending",
+            order_status: payment === "instapay" ? "new" : "confirmed",
           }),
         );
       } catch {

@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/lib/auth";
 import { formatPrice, supabase } from "@/lib/supabase";
+import {
+  fetchAdminReviews,
+  moderateProductReview,
+  type ProductReview,
+  type ReviewStatus,
+} from "@/lib/reviews";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — JABAL" }] }),
@@ -26,7 +32,8 @@ type AdminOrderRow = {
   total_items: number | null;
   total_price_egp: number | null;
   payment_method: string | null;
-  status: string;
+  payment_status: PaymentStatus;
+  order_status: OrderStatus;
   tracking_number: string | null;
   payment_reference: string | null;
   created_at: string | null;
@@ -52,13 +59,33 @@ type AdminInventoryRow = {
 };
 
 type OrderDraft = {
-  status: string;
+  payment_status: PaymentStatus;
+  order_status: OrderStatus;
   tracking_number: string;
   payment_reference: string;
 };
 
-const ORDER_STATUSES = ["pending", "confirmed", "paid", "shipped", "delivered", "cancelled"];
-const ORDER_STATUS_FILTERS = ["all", "needs_action", ...ORDER_STATUSES];
+type PaymentStatus = "pending" | "paid" | "failed" | "cod_pending" | "refunded";
+type OrderStatus = "new" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
+
+const PAYMENT_STATUSES: PaymentStatus[] = ["pending", "paid", "failed", "cod_pending", "refunded"];
+const ORDER_STATUSES: OrderStatus[] = [
+  "new",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
+const PAYMENT_STATUS_FILTERS = ["all", "needs_action", ...PAYMENT_STATUSES] as const;
+const ORDER_STATUS_FILTERS = ["all", ...ORDER_STATUSES] as const;
+const REVIEW_STATUS_FILTERS: (ReviewStatus | "all")[] = [
+  "pending",
+  "approved",
+  "rejected",
+  "hidden",
+  "all",
+];
 const PAGE_SIZE = 12;
 
 function AdminPage() {
@@ -67,14 +94,18 @@ function AdminPage() {
   const [revenue, setRevenue] = useState<RevenueRow[]>([]);
   const [orders, setOrders] = useState<AdminOrderRow[]>([]);
   const [inventory, setInventory] = useState<AdminInventoryRow[]>([]);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [orderDrafts, setOrderDrafts] = useState<Record<string, OrderDraft>>({});
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
-  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
+  const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatus | "all">("pending");
   const [orderQuery, setOrderQuery] = useState("");
   const [inventoryQuery, setInventoryQuery] = useState("");
   const [orderPage, setOrderPage] = useState(1);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [savingVariantId, setSavingVariantId] = useState<string | null>(null);
+  const [moderatingReviewId, setModeratingReviewId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +114,7 @@ function AdminPage() {
     setError(null);
     if (clearNotice) setNotice(null);
     setLoadingData(true);
-    const [revenueResult, ordersResult, inventoryResult] = await Promise.all([
+    const [revenueResult, ordersResult, inventoryResult, reviewResult] = await Promise.all([
       supabase
         .from("revenue")
         .select("month_start,total_revenue_egp,paid_order_count")
@@ -91,7 +122,7 @@ function AdminPage() {
       supabase
         .from("combined_orders")
         .select(
-          "order_id,customer_name,customer_email,customer_phone,shipping_address,order_summary,total_items,total_price_egp,payment_method,status,tracking_number,payment_reference,created_at",
+          "order_id,customer_name,customer_email,customer_phone,shipping_address,order_summary,total_items,total_price_egp,payment_method,payment_status,order_status,tracking_number,payment_reference,created_at",
         )
         .order("created_at", { ascending: false })
         .limit(100),
@@ -102,14 +133,18 @@ function AdminPage() {
         )
         .order("color", { ascending: true })
         .order("size", { ascending: true }),
+      fetchAdminReviews("all")
+        .then((data) => ({ data, error: null }))
+        .catch((reviewError) => ({ data: null, error: reviewError as Error })),
     ]);
     setLoadingData(false);
 
-    if (revenueResult.error || ordersResult.error || inventoryResult.error) {
+    if (revenueResult.error || ordersResult.error || inventoryResult.error || reviewResult.error) {
       setError(
         revenueResult.error?.message ||
           ordersResult.error?.message ||
           inventoryResult.error?.message ||
+          reviewResult.error?.message ||
           "Admin data failed",
       );
       return;
@@ -120,12 +155,14 @@ function AdminPage() {
     const nextInventory = sortInventory((inventoryResult.data as AdminInventoryRow[]) || []);
     setOrders(nextOrders);
     setInventory(nextInventory);
+    setReviews((reviewResult.data as ProductReview[]) || []);
     setOrderDrafts(
       Object.fromEntries(
         nextOrders.map((order) => [
           order.order_id,
           {
-            status: order.status,
+            payment_status: order.payment_status,
+            order_status: order.order_status,
             tracking_number: order.tracking_number ?? "",
             payment_reference: order.payment_reference ?? "",
           },
@@ -143,7 +180,8 @@ function AdminPage() {
     setOrderDrafts((current) => ({
       ...current,
       [orderId]: {
-        status: current[orderId]?.status ?? "pending",
+        payment_status: current[orderId]?.payment_status ?? "pending",
+        order_status: current[orderId]?.order_status ?? "new",
         tracking_number: current[orderId]?.tracking_number ?? "",
         payment_reference: current[orderId]?.payment_reference ?? "",
         ...patch,
@@ -160,7 +198,8 @@ function AdminPage() {
     setSavingOrderId(orderId);
     const { error: updateError } = await supabase.rpc("admin_update_order", {
       p_order_id: orderId,
-      p_status: draft.status,
+      p_payment_status: draft.payment_status,
+      p_order_status: draft.order_status,
       p_tracking_number: draft.tracking_number,
       p_payment_reference: draft.payment_reference,
     });
@@ -175,9 +214,27 @@ function AdminPage() {
     setNotice(`${orderId} updated`);
   };
 
-  const changeOrderStatus = (orderId: string, status: string) => {
-    updateDraft(orderId, { status });
-    saveOrder(orderId, { status });
+  const changePaymentStatus = (orderId: string, payment_status: PaymentStatus) => {
+    const patch: Partial<OrderDraft> = { payment_status };
+    if (payment_status === "paid" && (orderDrafts[orderId]?.order_status ?? "new") === "new") {
+      patch.order_status = "confirmed";
+    }
+    updateDraft(orderId, patch);
+    saveOrder(orderId, patch);
+  };
+
+  const markOrderPaid = (orderId: string) => {
+    changePaymentStatus(orderId, "paid");
+  };
+
+  const changeOrderStatus = (orderId: string, order_status: OrderStatus) => {
+    updateDraft(orderId, { order_status });
+    saveOrder(orderId, { order_status });
+  };
+
+  const updatePaymentFilter = (status: string) => {
+    setPaymentStatusFilter(status);
+    setOrderPage(1);
   };
 
   const updateOrderFilter = (status: string) => {
@@ -210,6 +267,25 @@ function AdminPage() {
     setNotice("Stock updated");
   };
 
+  const moderateReview = async (
+    reviewId: string,
+    status: Exclude<ReviewStatus, "pending">,
+    rejectedPhotoIds: string[] = [],
+  ) => {
+    setError(null);
+    setNotice(null);
+    setModeratingReviewId(reviewId);
+    try {
+      await moderateProductReview(reviewId, status, rejectedPhotoIds);
+      await loadAdminData(false);
+      setNotice(`Review ${status}`);
+    } catch (reviewError) {
+      setError(reviewError instanceof Error ? reviewError.message : "Review update failed");
+    } finally {
+      setModeratingReviewId(null);
+    }
+  };
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -218,6 +294,10 @@ function AdminPage() {
     }
     if (!adminLoading && isAdmin) loadAdminData();
   }, [user, loading, adminLoading, isAdmin, navigate]);
+
+  useEffect(() => {
+    if (isAdmin) loadAdminData();
+  }, [isAdmin, reviewStatusFilter]);
 
   const summary = useMemo(() => {
     const totalRevenue = revenue.reduce((sum, row) => sum + Number(row.total_revenue_egp || 0), 0);
@@ -235,12 +315,16 @@ function AdminPage() {
       (variant) => variant.stock_quantity > 0 && variant.stock_quantity <= 3,
     );
     const actionOrders = orders.filter((order) => orderNeedsAction(order));
+    const paymentFilteredOrders =
+      paymentStatusFilter === "all"
+        ? orders
+        : paymentStatusFilter === "needs_action"
+          ? actionOrders
+          : orders.filter((order) => order.payment_status === paymentStatusFilter);
     const statusFilteredOrders =
       orderStatusFilter === "all"
-        ? orders
-        : orderStatusFilter === "needs_action"
-          ? actionOrders
-          : orders.filter((order) => order.status === orderStatusFilter);
+        ? paymentFilteredOrders
+        : paymentFilteredOrders.filter((order) => order.order_status === orderStatusFilter);
     const normalizedOrderQuery = orderQuery.trim().toLowerCase();
     const filteredOrders = normalizedOrderQuery
       ? statusFilteredOrders.filter((order) => orderMatchesQuery(order, normalizedOrderQuery))
@@ -255,11 +339,26 @@ function AdminPage() {
     const filteredInventory = normalizedInventoryQuery
       ? inventory.filter((variant) => inventoryMatchesQuery(variant, normalizedInventoryQuery))
       : inventory;
-    const orderCounts = ORDER_STATUSES.reduce<Record<string, number>>((counts, status) => {
-      counts[status] = orders.filter((order) => order.status === status).length;
+    const paymentCounts = PAYMENT_STATUSES.reduce<Record<string, number>>((counts, status) => {
+      counts[status] = orders.filter((order) => order.payment_status === status).length;
       return counts;
     }, {});
-    orderCounts.needs_action = actionOrders.length;
+    paymentCounts.needs_action = actionOrders.length;
+    const orderCounts = ORDER_STATUSES.reduce<Record<string, number>>((counts, status) => {
+      counts[status] = orders.filter((order) => order.order_status === status).length;
+      return counts;
+    }, {});
+    const filteredReviews =
+      reviewStatusFilter === "all"
+        ? reviews
+        : reviews.filter((review) => review.status === reviewStatusFilter);
+    const reviewCounts = REVIEW_STATUS_FILTERS.reduce<Record<string, number>>((counts, status) => {
+      counts[status] =
+        status === "all"
+          ? reviews.length
+          : reviews.filter((review) => review.status === status).length;
+      return counts;
+    }, {});
 
     return {
       totalRevenue,
@@ -273,9 +372,23 @@ function AdminPage() {
       filteredInventory,
       orderPageCount,
       safeOrderPage,
+      paymentCounts,
       orderCounts,
+      filteredReviews,
+      reviewCounts,
     };
-  }, [revenue, inventory, orders, orderStatusFilter, orderQuery, inventoryQuery, orderPage]);
+  }, [
+    revenue,
+    inventory,
+    orders,
+    reviews,
+    paymentStatusFilter,
+    orderStatusFilter,
+    reviewStatusFilter,
+    orderQuery,
+    inventoryQuery,
+    orderPage,
+  ]);
 
   if (loading || adminLoading) {
     return (
@@ -370,20 +483,20 @@ function AdminPage() {
           />
           <Metric label="Stock units" value={String(summary.totalStock)} />
           <Metric label="Low stock" value={String(summary.lowStock.length)} />
-          <Metric label="Needs action" value={String(summary.orderCounts.needs_action ?? 0)} />
+          <Metric label="Needs action" value={String(summary.paymentCounts.needs_action ?? 0)} />
+          <Metric label="Pending reviews" value={String(summary.reviewCounts.pending ?? 0)} />
         </section>
 
         <section className="mt-10" style={primarySectionStyle}>
-          <SectionHeader eyebrow="Orders" title="Order management" />
-          <div style={filterBarStyle} aria-label="Filter orders by status">
-            {ORDER_STATUS_FILTERS.map((status) => {
-              const active = orderStatusFilter === status;
-              const count = status === "all" ? orders.length : (summary.orderCounts[status] ?? 0);
+          <SectionHeader eyebrow="Reviews" title="Customer review moderation" />
+          <div style={filterBarStyle} aria-label="Filter reviews by status">
+            {REVIEW_STATUS_FILTERS.map((status) => {
+              const active = reviewStatusFilter === status;
               return (
                 <button
                   key={status}
                   type="button"
-                  onClick={() => updateOrderFilter(status)}
+                  onClick={() => setReviewStatusFilter(status)}
                   style={{
                     ...filterButtonStyle,
                     borderColor: active ? "#fff" : "#333",
@@ -391,10 +504,160 @@ function AdminPage() {
                     color: active ? "#000" : "#fff",
                   }}
                 >
-                  {statusLabel(status)} ({count})
+                  {status} ({summary.reviewCounts[status] ?? 0})
                 </button>
               );
             })}
+          </div>
+          <div className="grid gap-3">
+            {summary.filteredReviews.map((review) => {
+              const productName = productNameFromReview(review);
+              const approvedPhotos = (review.product_review_photos || []).filter(
+                (photo) => photo.status !== "rejected" && photo.status !== "hidden",
+              );
+              return (
+                <div key={review.id} style={reviewAdminCardStyle}>
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <div className="jb-eyebrow">{review.status}</div>
+                      <div style={{ color: "#fff", fontSize: 16, marginTop: 6 }}>{productName}</div>
+                      <div style={{ ...mutedText, marginTop: 4 }}>
+                        {review.display_name} · {review.order_id}
+                        {review.selected_color ? ` · ${review.selected_color}` : ""}
+                        {review.selected_size ? ` · ${review.selected_size}` : ""}
+                      </div>
+                    </div>
+                    <div style={{ color: "#fff", fontSize: 15 }}>
+                      {"★".repeat(review.rating)}
+                      <span style={{ color: "#444" }}>{"★".repeat(5 - review.rating)}</span>
+                    </div>
+                  </div>
+                  <p style={{ color: "#d8d8d8", lineHeight: 1.6, marginTop: 12 }}>
+                    {review.review_text}
+                  </p>
+                  {approvedPhotos.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mt-4">
+                      {approvedPhotos.map((photo) => (
+                        <a
+                          key={photo.id}
+                          href={photo.signed_url || undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            width: 90,
+                            height: 90,
+                            background: "#141414",
+                            display: "block",
+                          }}
+                        >
+                          {photo.signed_url && (
+                            <img
+                              src={photo.signed_url}
+                              alt={`${productName} review`}
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2 flex-wrap mt-4">
+                    {review.status !== "approved" && (
+                      <button
+                        type="button"
+                        className="jb-btn-ghost"
+                        onClick={() => moderateReview(review.id, "approved")}
+                        disabled={moderatingReviewId === review.id}
+                        style={{ minHeight: 36, padding: "0 12px" }}
+                      >
+                        Approve
+                      </button>
+                    )}
+                    {review.status !== "rejected" && (
+                      <button
+                        type="button"
+                        className="jb-btn-ghost"
+                        onClick={() => moderateReview(review.id, "rejected")}
+                        disabled={moderatingReviewId === review.id}
+                        style={{ minHeight: 36, padding: "0 12px" }}
+                      >
+                        Reject
+                      </button>
+                    )}
+                    {review.status !== "hidden" && (
+                      <button
+                        type="button"
+                        className="jb-btn-ghost"
+                        onClick={() => moderateReview(review.id, "hidden")}
+                        disabled={moderatingReviewId === review.id}
+                        style={{ minHeight: 36, padding: "0 12px" }}
+                      >
+                        Hide
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {summary.filteredReviews.length === 0 && (
+              <div style={{ color: "#9a9a9a", fontSize: 13 }}>No reviews match this filter</div>
+            )}
+          </div>
+        </section>
+
+        <section className="mt-10" style={primarySectionStyle}>
+          <SectionHeader eyebrow="Orders" title="Order management" />
+          <div className="grid lg:grid-cols-2 gap-4">
+            <div>
+              <div className="jb-label">Payment status</div>
+              <div style={filterBarStyle} aria-label="Filter orders by payment status">
+                {PAYMENT_STATUS_FILTERS.map((status) => {
+                  const active = paymentStatusFilter === status;
+                  const count =
+                    status === "all" ? orders.length : (summary.paymentCounts[status] ?? 0);
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => updatePaymentFilter(status)}
+                      style={{
+                        ...filterButtonStyle,
+                        borderColor: active ? "#fff" : "#333",
+                        background: active ? "#fff" : "#050505",
+                        color: active ? "#000" : "#fff",
+                      }}
+                    >
+                      {statusLabel(status)} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <div className="jb-label">Order status</div>
+              <div style={filterBarStyle} aria-label="Filter orders by order status">
+                {ORDER_STATUS_FILTERS.map((status) => {
+                  const active = orderStatusFilter === status;
+                  const count =
+                    status === "all" ? orders.length : (summary.orderCounts[status] ?? 0);
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => updateOrderFilter(status)}
+                      style={{
+                        ...filterButtonStyle,
+                        borderColor: active ? "#fff" : "#333",
+                        background: active ? "#fff" : "#050505",
+                        color: active ? "#000" : "#fff",
+                      }}
+                    >
+                      {statusLabel(status)} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
           <div className="mb-4">
             <label className="jb-label" htmlFor="admin-order-search">
@@ -420,7 +683,8 @@ function AdminPage() {
                   <Th>What they ordered</Th>
                   <Th>Location</Th>
                   <Th>Payment</Th>
-                  <Th>Status</Th>
+                  <Th>Payment status</Th>
+                  <Th>Order status</Th>
                   <Th>Tracking</Th>
                   <Th align="right">Total</Th>
                   <Th align="right">Save</Th>
@@ -429,12 +693,15 @@ function AdminPage() {
               <tbody>
                 {summary.pagedOrders.map((order) => {
                   const draft = orderDrafts[order.order_id] ?? {
-                    status: order.status,
+                    payment_status: order.payment_status,
+                    order_status: order.order_status,
                     tracking_number: order.tracking_number ?? "",
                     payment_reference: order.payment_reference ?? "",
                   };
+                  const availableOrderStatuses = getAllowedOrderStatuses(draft.payment_status);
                   const changed =
-                    draft.status !== order.status ||
+                    draft.payment_status !== order.payment_status ||
+                    draft.order_status !== order.order_status ||
                     draft.tracking_number !== (order.tracking_number ?? "") ||
                     draft.payment_reference !== (order.payment_reference ?? "");
                   return (
@@ -478,16 +745,46 @@ function AdminPage() {
                         />
                       </Td>
                       <Td>
+                        <StatusBadge value={draft.payment_status} kind="payment" />
+                        {draft.payment_status === "pending" && (
+                          <button
+                            type="button"
+                            className="jb-btn-ghost"
+                            onClick={() => markOrderPaid(order.order_id)}
+                            disabled={savingOrderId === order.order_id}
+                            style={{ minHeight: 32, padding: "0 10px", margin: "8px 0" }}
+                          >
+                            Mark as paid
+                          </button>
+                        )}
                         <select
-                          value={draft.status}
+                          value={draft.payment_status}
                           onChange={(event) =>
-                            changeOrderStatus(order.order_id, event.target.value)
+                            changePaymentStatus(order.order_id, event.target.value as PaymentStatus)
                           }
                           disabled={savingOrderId === order.order_id}
                           style={controlStyle}
-                          aria-label={`Status for ${order.order_id}`}
+                          aria-label={`Payment status for ${order.order_id}`}
                         >
-                          {ORDER_STATUSES.map((status) => (
+                          {PAYMENT_STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </Td>
+                      <Td>
+                        <StatusBadge value={draft.order_status} kind="order" />
+                        <select
+                          value={draft.order_status}
+                          onChange={(event) =>
+                            changeOrderStatus(order.order_id, event.target.value as OrderStatus)
+                          }
+                          disabled={savingOrderId === order.order_id}
+                          style={{ ...controlStyle, marginTop: 8 }}
+                          aria-label={`Order status for ${order.order_id}`}
+                        >
+                          {availableOrderStatuses.map((status) => (
                             <option key={status} value={status}>
                               {status}
                             </option>
@@ -526,8 +823,8 @@ function AdminPage() {
                 })}
                 {summary.filteredOrders.length === 0 && (
                   <tr>
-                    <Td colSpan={9}>
-                      {orders.length === 0 ? "No orders yet" : "No orders match this status"}
+                    <Td colSpan={10}>
+                      {orders.length === 0 ? "No orders yet" : "No orders match these filters"}
                     </Td>
                   </tr>
                 )}
@@ -769,15 +1066,62 @@ function paymentMethodLabel(value: string | null) {
 
 function statusLabel(status: string) {
   if (status === "needs_action") return "needs action";
+  if (status === "cod_pending") return "COD pending";
   return status;
 }
 
 function orderNeedsAction(order: AdminOrderRow) {
   return (
-    order.status === "pending" ||
-    order.status === "confirmed" ||
-    (order.status === "paid" && !order.tracking_number)
+    order.payment_status === "pending" ||
+    order.payment_status === "failed" ||
+    (order.payment_status === "paid" &&
+      order.order_status !== "delivered" &&
+      !order.tracking_number) ||
+    (order.payment_status === "cod_pending" && order.order_status === "delivered")
   );
+}
+
+function getAllowedOrderStatuses(paymentStatus: PaymentStatus) {
+  if (paymentStatus === "pending")
+    return ORDER_STATUSES.filter(
+      (status) =>
+        status !== "confirmed" &&
+        status !== "processing" &&
+        status !== "shipped" &&
+        status !== "delivered",
+    );
+  return ORDER_STATUSES;
+}
+
+function StatusBadge({ value, kind }: { value: string; kind: "payment" | "order" }) {
+  const palette =
+    kind === "payment"
+      ? paymentBadgePalette(value as PaymentStatus)
+      : orderBadgePalette(value as OrderStatus);
+  return <span style={{ ...badgeStyle, ...palette }}>{statusLabel(value)}</span>;
+}
+
+function paymentBadgePalette(status: PaymentStatus) {
+  if (status === "paid") return { borderColor: "#72d38a", color: "#b6f2c5", background: "#07150b" };
+  if (status === "pending")
+    return { borderColor: "#e7c75f", color: "#f4dda0", background: "#171203" };
+  if (status === "cod_pending")
+    return { borderColor: "#7fb5ff", color: "#bdd9ff", background: "#06111f" };
+  if (status === "refunded")
+    return { borderColor: "#c69cff", color: "#dfccff", background: "#12091d" };
+  return { borderColor: "#ff8f8f", color: "#ffc6c6", background: "#1d0707" };
+}
+
+function orderBadgePalette(status: OrderStatus) {
+  if (status === "delivered")
+    return { borderColor: "#72d38a", color: "#b6f2c5", background: "#07150b" };
+  if (status === "shipped" || status === "processing")
+    return { borderColor: "#7fb5ff", color: "#bdd9ff", background: "#06111f" };
+  if (status === "confirmed")
+    return { borderColor: "#e7c75f", color: "#f4dda0", background: "#171203" };
+  if (status === "cancelled")
+    return { borderColor: "#ff8f8f", color: "#ffc6c6", background: "#1d0707" };
+  return { borderColor: "#777", color: "#ddd", background: "#101010" };
 }
 
 function orderMatchesQuery(order: AdminOrderRow, query: string) {
@@ -790,7 +1134,8 @@ function orderMatchesQuery(order: AdminOrderRow, query: string) {
     order.order_summary,
     order.payment_reference,
     order.tracking_number,
-    order.status,
+    order.payment_status,
+    order.order_status,
   ]
     .filter(Boolean)
     .some((value) => String(value).toLowerCase().includes(query));
@@ -813,6 +1158,11 @@ function orderSummaryLines(value: string | null) {
 
 function productFromVariant(variant: AdminInventoryRow) {
   return Array.isArray(variant.item) ? variant.item[0] : variant.item;
+}
+
+function productNameFromReview(review: ProductReview) {
+  const item = Array.isArray(review.item) ? review.item[0] : review.item;
+  return item?.name || "Product";
 }
 
 function sortInventory(rows: AdminInventoryRow[]) {
@@ -853,6 +1203,12 @@ const tableWrap = {
 const primarySectionStyle = {
   border: "1px solid #262626",
   padding: 18,
+};
+
+const reviewAdminCardStyle = {
+  border: "1px solid #262626",
+  padding: 16,
+  background: "#050505",
 };
 
 const tableStyle = {
@@ -921,6 +1277,17 @@ const filterButtonStyle = {
   border: "1px solid #333",
   padding: "0 8px",
   fontSize: 12,
+  textTransform: "capitalize" as const,
+  whiteSpace: "nowrap" as const,
+};
+
+const badgeStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  minHeight: 24,
+  border: "1px solid",
+  padding: "0 8px",
+  fontSize: 11,
   textTransform: "capitalize" as const,
   whiteSpace: "nowrap" as const,
 };

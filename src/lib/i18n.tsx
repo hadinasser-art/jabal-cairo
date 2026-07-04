@@ -88,6 +88,8 @@ const DICT: Dict = {
   "account.orders.empty": { en: "No orders yet.", ar: "لا توجد طلبات بعد." },
   "account.startShopping": { en: "Start shopping", ar: "ابدأ التسوق" },
   "account.needHelp": { en: "Need help?", ar: "تحتاج مساعدة؟" },
+  "status.payment": { en: "Payment", ar: "الدفع" },
+  "status.order": { en: "Order", ar: "الطلب" },
   "auth.login.title": { en: "Log in", ar: "تسجيل الدخول" },
   "auth.password": { en: "Password", ar: "كلمة المرور" },
   "auth.newPassword": { en: "New password", ar: "كلمة المرور الجديدة" },

@@ -40,7 +40,7 @@ function Index() {
   const { t } = useI18n();
 
   useEffect(() => {
-    fetchFeaturedItems(4).then(setFeatured);
+    fetchFeaturedItems(8).then(setFeatured);
     fetchItemsByGender("mens").then((r) => setMen(r.slice(0, 4)));
     fetchItemsByGender("womens").then((r) => setWomen(r.slice(0, 4)));
   }, []);
@@ -88,7 +88,7 @@ function Index() {
       <Section
         title={t("home.featured.eyebrow")}
         heading={t("home.featured.title")}
-        to="/shop"
+        to="/featured"
         items={featured}
       />
       <Section title={t("men.eyebrow")} heading={t("home.men")} to="/men" items={men} />
@@ -105,7 +105,7 @@ function Section({
 }: {
   title: string;
   heading: string;
-  to: "/shop" | "/men" | "/women";
+  to: "/featured" | "/men" | "/women";
   items: Item[] | null;
 }) {
   const { t } = useI18n();
@@ -144,7 +144,7 @@ function Section({
             {t("section.empty")}
           </div>
         ) : (
-          items.map((it) => <ProductCard key={it.id} item={it} />)
+          items.map((it) => <ProductCard key={it.display_key || it.id} item={it} />)
         )}
       </div>
       <div className="mt-8 md:hidden text-center">

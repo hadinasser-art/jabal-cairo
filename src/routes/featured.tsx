@@ -24,7 +24,7 @@ function Featured() {
   const [items, setItems] = useState<Item[] | null>(null);
 
   useEffect(() => {
-    fetchFeaturedItems(24).then(setItems);
+    fetchFeaturedItems(8).then(setItems);
   }, []);
 
   return (
@@ -72,7 +72,7 @@ function Featured() {
               No featured products yet.
             </div>
           ) : (
-            items.map((item) => <ProductCard key={item.id} item={item} />)
+            items.map((item) => <ProductCard key={item.display_key || item.id} item={item} />)
           )}
         </div>
       </section>
