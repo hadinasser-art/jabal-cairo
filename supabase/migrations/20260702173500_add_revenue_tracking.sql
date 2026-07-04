@@ -66,7 +66,7 @@ set search_path = public
 as $$
 begin
   if tg_op = 'INSERT' then
-    if new.status = 'paid'::public.status then
+    if new.status::text = 'paid' then
       perform public.apply_revenue_delta(
         date_trunc('month', coalesce(new.created_at, now()))::date,
         coalesce(new.total_price_egp, 0),
@@ -78,7 +78,7 @@ begin
   end if;
 
   if tg_op = 'UPDATE' then
-    if old.status = 'paid'::public.status then
+    if old.status::text = 'paid' then
       perform public.apply_revenue_delta(
         date_trunc('month', coalesce(old.created_at, now()))::date,
         -coalesce(old.total_price_egp, 0),
@@ -86,7 +86,7 @@ begin
       );
     end if;
 
-    if new.status = 'paid'::public.status then
+    if new.status::text = 'paid' then
       perform public.apply_revenue_delta(
         date_trunc('month', coalesce(new.created_at, now()))::date,
         coalesce(new.total_price_egp, 0),
@@ -98,7 +98,7 @@ begin
   end if;
 
   if tg_op = 'DELETE' then
-    if old.status = 'paid'::public.status then
+    if old.status::text = 'paid' then
       perform public.apply_revenue_delta(
         date_trunc('month', coalesce(old.created_at, now()))::date,
         -coalesce(old.total_price_egp, 0),
@@ -147,7 +147,7 @@ select
   count(*)::integer as paid_order_count,
   now() as updated_at
 from public.combined_orders
-where status = 'paid'::public.status
+where status::text = 'paid'
 group by 1
 on conflict (month_start) do update
 set

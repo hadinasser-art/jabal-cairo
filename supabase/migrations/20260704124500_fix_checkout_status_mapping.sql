@@ -1,78 +1,5 @@
--- Split payment state from fulfillment state for combined_orders.
-
-do $$
-begin
-  if not exists (select 1 from pg_type where typnamespace = 'public'::regnamespace and typname = 'payment_status') then
-    create type public.payment_status as enum ('pending', 'paid', 'failed', 'cod_pending', 'refunded');
-  end if;
-
-  if not exists (select 1 from pg_type where typnamespace = 'public'::regnamespace and typname = 'order_status') then
-    create type public.order_status as enum ('new', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled');
-  end if;
-end;
-$$;
-
-alter table public.combined_orders
-  add column if not exists payment_status public.payment_status,
-  add column if not exists order_status public.order_status;
-
-update public.combined_orders
-set
-  payment_status = coalesce(
-    payment_status,
-    case
-      when status::text = 'paid' then 'paid'::public.payment_status
-      when payment_method = 'instapay'
-        and status::text in ('confirmed', 'shipped', 'delivered')
-      then 'paid'::public.payment_status
-      when status::text = 'cancelled' then 'failed'::public.payment_status
-      when payment_method = 'cod' then 'cod_pending'::public.payment_status
-      else 'pending'::public.payment_status
-    end
-  ),
-  order_status = coalesce(
-    order_status,
-    case
-      when status::text = 'shipped' then 'shipped'::public.order_status
-      when status::text = 'delivered' then 'delivered'::public.order_status
-      when status::text = 'cancelled' then 'cancelled'::public.order_status
-      when status::text in ('confirmed', 'paid') then 'confirmed'::public.order_status
-      else 'new'::public.order_status
-    end
-  );
-
-alter table public.combined_orders
-  alter column payment_status set default 'pending'::public.payment_status,
-  alter column payment_status set not null,
-  alter column order_status set default 'new'::public.order_status,
-  alter column order_status set not null;
-
-create or replace function public.prevent_unpaid_fulfillment()
-returns trigger
-language plpgsql
-set search_path = public
-as $$
-begin
-  if new.payment_status = 'pending'::public.payment_status
-    and new.order_status in (
-      'confirmed'::public.order_status,
-      'processing'::public.order_status,
-      'shipped'::public.order_status,
-      'delivered'::public.order_status
-    )
-  then
-    raise exception 'InstaPay orders must be marked paid before fulfillment';
-  end if;
-
-  return new;
-end;
-$$;
-
-drop trigger if exists prevent_unpaid_fulfillment on public.combined_orders;
-create trigger prevent_unpaid_fulfillment
-before insert or update of payment_status, order_status on public.combined_orders
-for each row
-execute function public.prevent_unpaid_fulfillment();
+-- Keep legacy combined_orders.status aligned to order states only.
+-- Payment state now lives in combined_orders.payment_status.
 
 create or replace function public.place_order(p_order jsonb)
 returns text
@@ -390,8 +317,6 @@ $$;
 revoke all on function public.place_order(jsonb) from public;
 grant execute on function public.place_order(jsonb) to anon, authenticated;
 
-drop function if exists public.admin_update_order(text, public.status, text, text);
-
 create or replace function public.admin_update_order(
   p_order_id text,
   p_payment_status public.payment_status,
@@ -474,97 +399,5 @@ grant execute on function public.admin_update_order(
   text,
   text
 ) to authenticated;
-
-create or replace function public.sync_revenue_from_combined_order()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if tg_op = 'INSERT' then
-    if new.payment_status = 'paid'::public.payment_status then
-      perform public.apply_revenue_delta(
-        date_trunc('month', coalesce(new.created_at, now()))::date,
-        coalesce(new.total_price_egp, 0),
-        1
-      );
-    end if;
-
-    return new;
-  end if;
-
-  if tg_op = 'UPDATE' then
-    if old.payment_status = 'paid'::public.payment_status then
-      perform public.apply_revenue_delta(
-        date_trunc('month', coalesce(old.created_at, now()))::date,
-        -coalesce(old.total_price_egp, 0),
-        -1
-      );
-    end if;
-
-    if new.payment_status = 'paid'::public.payment_status then
-      perform public.apply_revenue_delta(
-        date_trunc('month', coalesce(new.created_at, now()))::date,
-        coalesce(new.total_price_egp, 0),
-        1
-      );
-    end if;
-
-    return new;
-  end if;
-
-  if tg_op = 'DELETE' then
-    if old.payment_status = 'paid'::public.payment_status then
-      perform public.apply_revenue_delta(
-        date_trunc('month', coalesce(old.created_at, now()))::date,
-        -coalesce(old.total_price_egp, 0),
-        -1
-      );
-    end if;
-
-    return old;
-  end if;
-
-  return null;
-end;
-$$;
-
-drop trigger if exists sync_revenue_from_combined_order_update on public.combined_orders;
-create trigger sync_revenue_from_combined_order_update
-after update of payment_status, total_price_egp, created_at on public.combined_orders
-for each row
-execute function public.sync_revenue_from_combined_order();
-
-update public.revenue
-set
-  total_revenue_egp = 0,
-  paid_order_count = 0,
-  updated_at = now();
-
-insert into public.revenue (
-  month_start,
-  total_revenue_egp,
-  paid_order_count,
-  updated_at
-)
-select
-  date_trunc('month', created_at)::date as month_start,
-  coalesce(sum(total_price_egp), 0) as total_revenue_egp,
-  count(*)::integer as paid_order_count,
-  now() as updated_at
-from public.combined_orders
-where payment_status = 'paid'::public.payment_status
-group by 1
-on conflict (month_start) do update
-set
-  total_revenue_egp = excluded.total_revenue_egp,
-  paid_order_count = excluded.paid_order_count,
-  updated_at = now();
-
-revoke execute on function public.prevent_unpaid_fulfillment()
-  from anon, authenticated, public;
-revoke execute on function public.sync_revenue_from_combined_order()
-  from anon, authenticated, public;
 
 notify pgrst, 'reload schema';

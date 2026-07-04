@@ -266,7 +266,7 @@ begin
     and coi.item_id = p_item_id
     and (p_variant_id is null or coi.variant_id = p_variant_id)
     and co.user_id = v_user_id
-    and co.status in ('paid', 'shipped', 'delivered')
+    and co.status in ('shipped', 'delivered')
   order by coi.created_at desc
   limit 1;
 
@@ -279,7 +279,7 @@ begin
       and coi.item_id = p_item_id
       and (p_variant_id is null or coi.variant_id = p_variant_id)
       and co.user_id = v_user_id
-      and co.status in ('paid', 'shipped', 'delivered')
+      and co.status in ('shipped', 'delivered')
   ) then
     raise exception 'Only verified buyers can review this product';
   end if;
@@ -456,7 +456,7 @@ as $$
   where coi.user_id = (select auth.uid())
     and co.user_id = (select auth.uid())
     and coi.item_id = p_item_id
-    and co.status in ('paid', 'shipped', 'delivered')
+    and co.status in ('shipped', 'delivered')
     and not exists (
       select 1
       from public.product_reviews pr
