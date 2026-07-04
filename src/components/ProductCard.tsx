@@ -12,7 +12,7 @@ export function ProductCard({ item }: { item: Item }) {
   const { t } = useI18n();
 
   const imageUrl = getCardImageUrl(item);
-  const swatches = sortCardColors(item).slice(0, 4);
+  const swatches = sortCardColors(item);
   const sizes = sortSizes(item.size || []);
   const soldOut = item.sold_out || item.stock_quantity <= 0;
 
@@ -38,17 +38,17 @@ export function ProductCard({ item }: { item: Item }) {
             {formatPrice(item.price_egp)}
           </div>
           {swatches.length > 0 && (
-            <div className="flex gap-[6px] mt-2">
+            <div className="flex flex-wrap gap-[6px] mt-2">
               {swatches.map((c) => (
                 <span
                   key={c}
                   title={c}
                   style={{
-                    width: 10,
-                    height: 10,
+                    width: 12,
+                    height: 12,
                     borderRadius: 999,
-                    background: swatchColor(c),
-                    border: "1px solid #262626",
+                    background: swatchColor(c, item),
+                    border: "1px solid #3a3a3a",
                     display: "inline-block",
                   }}
                 />
@@ -98,8 +98,22 @@ function sortCardColors(item: Item) {
   });
 }
 
-function swatchColor(name: string): string {
+function swatchColor(name: string, item?: Item): string {
   const n = name.toLowerCase();
+  const productLabel = `${item?.name ?? ""} ${item?.category ?? ""}`.toLowerCase();
+  if (productLabel.includes("polo")) {
+    if (n === "sage") return "#314f42";
+    if (n === "gray" || n === "grey") return "#b8b8b6";
+    if (n === "burgundy" || n === "burgandy") return "#45151f";
+    if (n === "blue") return "#075fc6";
+    if (n === "dark blue") return "#182237";
+    if (n === "black") return "#050505";
+  }
+  if (productLabel.includes("drop shoulder")) {
+    if (n === "brown") return "#3a281c";
+    if (n === "burgundy" || n === "burgandy") return "#5b1428";
+    if (n === "gray" || n === "grey") return "#303333";
+  }
   if (n === "black") return "#050505";
   if (n === "gray" || n === "grey") return "#8f8f8f";
   if (n === "sage") return "#727a68";
@@ -107,10 +121,15 @@ function swatchColor(name: string): string {
   if (n === "baby blue") return "#9fc7de";
   if (n === "navy blue") return "#152845";
   if (n === "steel blue") return "#345c92";
+  if (n === "dark blue") return "#182237";
+  if (n === "burgundy" || n === "burgandy") return "#5b1428";
+  if (n === "brown") return "#3a281c";
   if (n.includes("orange")) return "#f26318";
   if (n.includes("baby blue")) return "#9fc7de";
   if (n.includes("navy blue")) return "#152845";
   if (n.includes("steel blue")) return "#345c92";
+  if (n.includes("dark blue")) return "#182237";
+  if (n.includes("burgundy") || n.includes("burgandy")) return "#5b1428";
   if (n.includes("sage")) return "#727a68";
   const map: Record<string, string> = {
     black: "#050505",
