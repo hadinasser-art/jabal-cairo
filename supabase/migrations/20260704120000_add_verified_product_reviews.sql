@@ -516,11 +516,11 @@ begin
     raise exception 'Missing required customer details';
   end if;
 
-  if nullif(trim(coalesce(p_order->>'customer_email', '')), '') !~* '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$' then
+  if nullif(trim(coalesce(p_order->>'customer_email', '')), '') !~* '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
     raise exception 'Invalid customer email';
   end if;
 
-  if nullif(trim(coalesce(p_order->>'customer_phone', '')), '') !~ '^[0-9+\\-\\s()]{7,20}$' then
+  if nullif(trim(coalesce(p_order->>'customer_phone', '')), '') !~ '^[0-9+()[:space:]-]{7,20}$' then
     raise exception 'Invalid customer phone';
   end if;
 

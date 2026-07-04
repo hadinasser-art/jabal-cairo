@@ -103,6 +103,9 @@ async function validateCartStock(items: CartItem[], t: Translate) {
 
 function friendlyOrderError(message: string, t: Translate) {
   const lower = message.toLowerCase();
+  if (lower.includes("invalid customer email")) return t("form.error.email");
+  if (lower.includes("invalid customer phone")) return t("form.error.phone");
+  if (lower.includes("order total changed")) return message;
   if (
     lower.includes("stock") ||
     lower.includes("sold out") ||
