@@ -40,7 +40,7 @@ function Index() {
   const { t } = useI18n();
 
   useEffect(() => {
-    fetchFeaturedItems(8).then(setFeatured);
+    fetchFeaturedItems(4).then(setFeatured);
     fetchItemsByGender("mens").then((r) => setMen(r.slice(0, 4)));
     fetchItemsByGender("womens").then((r) => setWomen(r.slice(0, 4)));
   }, []);
