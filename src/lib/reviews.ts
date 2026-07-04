@@ -65,7 +65,10 @@ export async function fetchApprovedProductReviews(itemId: string) {
     .eq("status", "approved")
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingReviewSchema(error)) return [];
+    throw error;
+  }
   return signReviewPhotoUrls((data as ProductReview[]) || []);
 }
 
@@ -74,7 +77,10 @@ export async function fetchReviewEligiblePurchases(itemId: string) {
     p_item_id: itemId,
   });
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingReviewSchema(error)) return [];
+    throw error;
+  }
   return (data as ReviewEligiblePurchase[]) || [];
 }
 
@@ -131,7 +137,10 @@ export async function fetchAdminReviews(status: ReviewStatus | "all" = "pending"
   if (status !== "all") query = query.eq("status", status);
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    if (isMissingReviewSchema(error)) return [];
+    throw error;
+  }
   return signReviewPhotoUrls((data as ProductReview[]) || []);
 }
 
@@ -191,6 +200,18 @@ function validateReviewPhoto(file: File) {
   if (file.size > MAX_REVIEW_PHOTO_BYTES) {
     throw new Error("Each photo must be 5MB or smaller.");
   }
+}
+
+function isMissingReviewSchema(error: { code?: string; message?: string }) {
+  const message = (error.message || "").toLowerCase();
+  return (
+    error.code === "42P01" ||
+    error.code === "42883" ||
+    error.code === "PGRST202" ||
+    message.includes("product_reviews") ||
+    message.includes("product_review_photos") ||
+    message.includes("get_review_eligible_purchases")
+  );
 }
 
 function safeFileName(name: string) {
