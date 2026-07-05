@@ -175,7 +175,7 @@ function CartPage() {
     return () => window.clearInterval(interval);
   }, []);
 
-  const baseShippingFee = 0;
+  const baseShippingFee = 80;
   const offerTotals = useMemo(
     () =>
       calculateOfferTotals(
