@@ -113,6 +113,7 @@ function swatchColor(name: string, item?: Item): string {
     if (n === "brown") return "#3a281c";
     if (n === "burgundy" || n === "burgandy") return "#5b1428";
     if (n === "gray" || n === "grey") return "#303333";
+    if (n === "green") return "#3d5a3f";
   }
   if (n === "black") return "#050505";
   if (n === "gray" || n === "grey") return "#8f8f8f";
