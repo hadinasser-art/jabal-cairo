@@ -101,7 +101,6 @@ export function useAdminDashboard(isAdmin: boolean) {
       revenueResult.error ||
       ordersResult.error ||
       inventoryResult.error ||
-      reviewResult.error ||
       productsResult.error ||
       mediaResult.error
     ) {
@@ -109,7 +108,6 @@ export function useAdminDashboard(isAdmin: boolean) {
         revenueResult.error?.message ||
           ordersResult.error?.message ||
           inventoryResult.error?.message ||
-          reviewResult.error?.message ||
           productsResult.error?.message ||
           mediaResult.error?.message ||
           "Admin data failed",
@@ -143,6 +141,11 @@ export function useAdminDashboard(isAdmin: boolean) {
         nextInventory.map((variant) => [variant.id, String(variant.stock_quantity ?? 0)]),
       ),
     );
+    if (reviewResult.error) {
+      setError(
+        `Reviews are unavailable, but the rest of the dashboard is ready. ${reviewResult.error.message}`,
+      );
+    }
   }, []);
 
   useEffect(() => {

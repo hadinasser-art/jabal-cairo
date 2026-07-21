@@ -20,8 +20,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
 
-  const refreshAdminStatus = useCallback(async (currentUser: User | null) => {
-    if (!currentUser) {
+  const refreshAdminStatus = useCallback(async (currentUserId: string | null) => {
+    if (!currentUserId) {
       setIsAdmin(false);
       setAdminLoading(false);
       return false;
@@ -49,34 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let alive = true;
-
-    refreshAdminStatus(user).then(() => {
-      if (!alive) return;
-    });
-
-    return () => {
-      alive = false;
-    };
-  }, [user, refreshAdminStatus]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const refresh = () => {
-      if (document.visibilityState === "visible") refreshAdminStatus(user);
-    };
-    const interval = window.setInterval(refresh, 30000);
-
-    window.addEventListener("focus", refresh);
-    document.addEventListener("visibilitychange", refresh);
-
-    return () => {
-      window.clearInterval(interval);
-      window.removeEventListener("focus", refresh);
-      document.removeEventListener("visibilitychange", refresh);
-    };
-  }, [user, refreshAdminStatus]);
+    void refreshAdminStatus(user?.id ?? null);
+    // RPCs enforce admin access server-side. Rechecking on a timer or window focus
+    // briefly replaced the admin UI with its loading screen and discarded local edits.
+  }, [user?.id, refreshAdminStatus]);
 
   const signOut = async () => {
     await supabase.auth.signOut();

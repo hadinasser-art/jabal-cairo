@@ -142,11 +142,14 @@ export function PhotoManager({
     const previousMedia = media;
     onMediaChange(media.filter((item) => item.id !== row.id));
     setPhotoState(row.id, { status: "saving" });
-    const { error } = await supabase.rpc("admin_delete_product_media", { p_id: row.id });
-    if (error) {
+    const { data: deleted, error } = await supabase.rpc("admin_delete_product_media", {
+      p_id: row.id,
+    });
+    if (error || deleted !== true) {
       onMediaChange(previousMedia);
-      setPhotoState(row.id, { status: "error", message: error.message });
-      onError(error.message);
+      const message = error?.message || "The photo could not be deleted. Refresh and try again.";
+      setPhotoState(row.id, { status: "error", message });
+      onError(message);
       return;
     }
     const failures = await removeProductFiles([row.url]);
