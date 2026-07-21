@@ -367,6 +367,7 @@ export function useAdminDashboard(isAdmin: boolean) {
     inventory,
     products,
     media,
+    setInventory,
     setProducts,
     setMedia,
     orderDrafts,

@@ -11,6 +11,7 @@ import {
 } from "@/components/admin/photo-storage";
 import type { SaveState } from "@/components/admin/PhotoTile";
 import type {
+  AdminInventoryRow,
   AdminMediaRow,
   AdminProductRow,
   MediaKind,
@@ -25,8 +26,10 @@ import { supabase } from "@/lib/supabase";
 
 interface PhotoManagerProps {
   products: AdminProductRow[];
+  inventory: AdminInventoryRow[];
   media: AdminMediaRow[];
   onProductsChange: Dispatch<SetStateAction<AdminProductRow[]>>;
+  onInventoryChange: Dispatch<SetStateAction<AdminInventoryRow[]>>;
   onMediaChange: Dispatch<SetStateAction<AdminMediaRow[]>>;
   onNotice: (message: string | null) => void;
   onError: (message: string | null) => void;
@@ -37,8 +40,10 @@ type AssetField = "image_url" | "size_chart_url";
 
 export function PhotoManager({
   products,
+  inventory,
   media,
   onProductsChange,
+  onInventoryChange,
   onMediaChange,
   onNotice,
   onError,
@@ -62,13 +67,18 @@ export function PhotoManager({
         .sort((a, b) => a.sort_order - b.sort_order),
     [media, selectedProduct?.id],
   );
+  const productVariants = useMemo(
+    () => inventory.filter((variant) => variant.item_id === selectedProduct?.id),
+    [inventory, selectedProduct?.id],
+  );
   const colors = useMemo(() => {
     const configured = selectedProduct?.color_order || [];
-    const extras = productMedia
+    const mediaColors = productMedia
       .map((row) => row.color)
       .filter((color): color is string => !!color && !configured.includes(color));
-    return Array.from(new Set([...configured, ...extras]));
-  }, [productMedia, selectedProduct?.color_order]);
+    const variantColors = productVariants.map((variant) => variant.color);
+    return Array.from(new Set([...configured, ...mediaColors, ...variantColors]));
+  }, [productMedia, productVariants, selectedProduct?.color_order]);
 
   const setPhotoState = (id: string, state: SaveState) => {
     setSaveStates((current) => ({ ...current, [id]: state }));
@@ -311,7 +321,9 @@ export function PhotoManager({
   const deleteColorGroup = async (color: string) => {
     if (!selectedProduct) return;
     const rows = productMedia.filter((row) => row.color === color);
+    const variants = productVariants.filter((variant) => variant.color === color);
     const previousProducts = products;
+    const previousInventory = inventory;
     const previousMedia = media;
     const nextOrder = colors.filter((item) => item !== color);
     onProductsChange(
@@ -322,23 +334,39 @@ export function PhotoManager({
     onMediaChange(
       media.filter((row) => !(row.item_id === selectedProduct.id && row.color === color)),
     );
+    onInventoryChange(
+      inventory.filter(
+        (variant) => !(variant.item_id === selectedProduct.id && variant.color === color),
+      ),
+    );
     setColorBusy(color);
-    const { error } = await supabase.rpc("admin_delete_product_media_group", {
+    const { data, error } = await supabase.rpc("admin_delete_product_color", {
       p_item_id: selectedProduct.id,
       p_color: color,
     });
     setColorBusy(null);
     if (error) {
       onProductsChange(previousProducts);
+      onInventoryChange(previousInventory);
       onMediaChange(previousMedia);
       onError(error.message);
       return;
     }
-    const failures = await removeProductFiles(rows.map((row) => row.url));
+    const result = data as {
+      deleted_media_count?: number;
+      deleted_variant_count?: number;
+      storage_urls?: string[];
+    } | null;
+    const storageUrls = Array.isArray(result?.storage_urls)
+      ? result.storage_urls
+      : rows.map((row) => row.url);
+    const failures = await removeProductFiles(storageUrls);
+    const deletedPhotoCount = result?.deleted_media_count ?? rows.length;
+    const deletedVariantCount = result?.deleted_variant_count ?? variants.length;
     onNotice(
       failures.length
-        ? `${color} deleted, but ${failures.length} storage file${failures.length === 1 ? "" : "s"} could not be removed.`
-        : `${color} and ${rows.length} photo${rows.length === 1 ? "" : "s"} deleted`,
+        ? `${color} removed from the product, but ${failures.length} storage file${failures.length === 1 ? "" : "s"} could not be removed.`
+        : `${color} removed: ${deletedVariantCount} variant${deletedVariantCount === 1 ? "" : "s"} and ${deletedPhotoCount} photo${deletedPhotoCount === 1 ? "" : "s"} deleted`,
     );
   };
 
@@ -545,6 +573,7 @@ export function PhotoManager({
                   key={color}
                   color={color}
                   rows={productMedia.filter((row) => row.color === color)}
+                  variantCount={productVariants.filter((variant) => variant.color === color).length}
                   colorPosition={index}
                   colorCount={colors.length}
                   uploadJobs={uploadJobs.filter((job) => job.color === color)}
@@ -593,6 +622,7 @@ export function PhotoManager({
               <ColorGroup
                 color={null}
                 rows={productMedia.filter((row) => !row.color)}
+                variantCount={0}
                 colorPosition={colors.length}
                 colorCount={colors.length}
                 uploadJobs={uploadJobs.filter((job) => job.color === null)}

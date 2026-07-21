@@ -23,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 interface ColorGroupProps {
   color: string | null;
   rows: AdminMediaRow[];
+  variantCount: number;
   colorPosition: number;
   colorCount: number;
   uploadJobs: UploadJob[];
@@ -48,6 +49,7 @@ interface ColorGroupProps {
 export function ColorGroup({
   color,
   rows,
+  variantCount,
   colorPosition,
   colorCount,
   uploadJobs,
@@ -170,13 +172,16 @@ export function ColorGroup({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete “{color}”?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This permanently deletes the color group and {rows.length} photo
-                    {rows.length === 1 ? "" : "s"}, including uploaded storage files.
+                    This permanently removes {color} from the storefront and deletes its{" "}
+                    {variantCount} inventory variant{variantCount === 1 ? "" : "s"} and{" "}
+                    {rows.length} photo
+                    {rows.length === 1 ? "" : "s"}, including uploaded storage files. Previous order
+                    details are preserved.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={onDeleteGroup}>Delete group</AlertDialogAction>
+                  <AlertDialogAction onClick={onDeleteGroup}>Delete color</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

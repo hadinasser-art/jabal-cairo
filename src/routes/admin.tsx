@@ -204,8 +204,10 @@ function AdminPage() {
           <TabsContent value="photos" className="mt-4">
             <PhotoManager
               products={admin.products}
+              inventory={admin.inventory}
               media={admin.media}
               onProductsChange={admin.setProducts}
+              onInventoryChange={admin.setInventory}
               onMediaChange={admin.setMedia}
               onNotice={admin.setNotice}
               onError={admin.setError}
