@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { RefreshCw, Save } from "lucide-react";
+import { RefreshCw, Save, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/lib/auth";
@@ -65,6 +65,51 @@ type OrderDraft = {
   payment_reference: string;
 };
 
+type AdminProductRow = {
+  id: string;
+  name: string;
+  category: string | null;
+  gender: string | null;
+  image_url: string | null;
+  size_chart_url: string | null;
+  color_order: string[] | null;
+};
+
+type MediaKind = "gallery" | "thumbnail";
+
+type AdminMediaRow = {
+  id: string;
+  item_id: string;
+  color: string | null;
+  label: string;
+  url: string;
+  kind: MediaKind;
+  sort_order: number;
+  updated_at: string | null;
+};
+
+type ProductDraft = {
+  image_url: string;
+  size_chart_url: string;
+  color_order: string;
+};
+
+type MediaDraft = {
+  color: string;
+  label: string;
+  url: string;
+  kind: MediaKind;
+  sort_order: string;
+};
+
+const EMPTY_NEW_MEDIA_DRAFT: MediaDraft = {
+  color: "",
+  label: "",
+  url: "",
+  kind: "gallery",
+  sort_order: "10",
+};
+
 type PaymentStatus = "pending" | "paid" | "failed" | "cod_pending" | "refunded";
 type OrderStatus = "new" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
 
@@ -87,6 +132,7 @@ const REVIEW_STATUS_FILTERS: (ReviewStatus | "all")[] = [
   "all",
 ];
 const PAGE_SIZE = 12;
+const INVENTORY_PAGE_SIZE = 10;
 
 function AdminPage() {
   const { user, loading, isAdmin, adminLoading } = useAuth();
@@ -95,6 +141,12 @@ function AdminPage() {
   const [orders, setOrders] = useState<AdminOrderRow[]>([]);
   const [inventory, setInventory] = useState<AdminInventoryRow[]>([]);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [products, setProducts] = useState<AdminProductRow[]>([]);
+  const [media, setMedia] = useState<AdminMediaRow[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [productDrafts, setProductDrafts] = useState<Record<string, ProductDraft>>({});
+  const [mediaDrafts, setMediaDrafts] = useState<Record<string, MediaDraft>>({});
+  const [newMediaDraft, setNewMediaDraft] = useState<MediaDraft>(EMPTY_NEW_MEDIA_DRAFT);
   const [orderDrafts, setOrderDrafts] = useState<Record<string, OrderDraft>>({});
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
@@ -103,9 +155,14 @@ function AdminPage() {
   const [orderQuery, setOrderQuery] = useState("");
   const [inventoryQuery, setInventoryQuery] = useState("");
   const [orderPage, setOrderPage] = useState(1);
+  const [inventoryPage, setInventoryPage] = useState(1);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [savingVariantId, setSavingVariantId] = useState<string | null>(null);
   const [moderatingReviewId, setModeratingReviewId] = useState<string | null>(null);
+  const [savingProductId, setSavingProductId] = useState<string | null>(null);
+  const [savingMediaId, setSavingMediaId] = useState<string | null>(null);
+  const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +171,14 @@ function AdminPage() {
     setError(null);
     if (clearNotice) setNotice(null);
     setLoadingData(true);
-    const [revenueResult, ordersResult, inventoryResult, reviewResult] = await Promise.all([
+    const [
+      revenueResult,
+      ordersResult,
+      inventoryResult,
+      reviewResult,
+      productsResult,
+      mediaResult,
+    ] = await Promise.all([
       supabase
         .from("revenue")
         .select("month_start,total_revenue_egp,paid_order_count")
@@ -136,15 +200,33 @@ function AdminPage() {
       fetchAdminReviews("all")
         .then((data) => ({ data, error: null }))
         .catch((reviewError) => ({ data: null, error: reviewError as Error })),
+      supabase
+        .from("items")
+        .select("id,name,category,gender,image_url,size_chart_url,color_order")
+        .order("name", { ascending: true }),
+      supabase
+        .from("product_media")
+        .select("id,item_id,color,label,url,kind,sort_order,updated_at")
+        .order("item_id", { ascending: true })
+        .order("sort_order", { ascending: true }),
     ]);
     setLoadingData(false);
 
-    if (revenueResult.error || ordersResult.error || inventoryResult.error || reviewResult.error) {
+    if (
+      revenueResult.error ||
+      ordersResult.error ||
+      inventoryResult.error ||
+      reviewResult.error ||
+      productsResult.error ||
+      mediaResult.error
+    ) {
       setError(
         revenueResult.error?.message ||
           ordersResult.error?.message ||
           inventoryResult.error?.message ||
           reviewResult.error?.message ||
+          productsResult.error?.message ||
+          mediaResult.error?.message ||
           "Admin data failed",
       );
       return;
@@ -156,6 +238,37 @@ function AdminPage() {
     setOrders(nextOrders);
     setInventory(nextInventory);
     setReviews((reviewResult.data as ProductReview[]) || []);
+    const nextProducts = ((productsResult.data as AdminProductRow[]) || []).slice();
+    const nextMedia = (mediaResult.data as AdminMediaRow[]) || [];
+    setProducts(nextProducts);
+    setMedia(nextMedia);
+    setProductDrafts(
+      Object.fromEntries(
+        nextProducts.map((product) => [
+          product.id,
+          {
+            image_url: product.image_url ?? "",
+            size_chart_url: product.size_chart_url ?? "",
+            color_order: (product.color_order ?? []).join(", "),
+          },
+        ]),
+      ),
+    );
+    setMediaDrafts(
+      Object.fromEntries(
+        nextMedia.map((row) => [
+          row.id,
+          {
+            color: row.color ?? "",
+            label: row.label,
+            url: row.url,
+            kind: row.kind,
+            sort_order: String(row.sort_order ?? 0),
+          },
+        ]),
+      ),
+    );
+    setSelectedProductId((current) => current || nextProducts[0]?.id || "");
     setOrderDrafts(
       Object.fromEntries(
         nextOrders.map((order) => [
@@ -286,6 +399,189 @@ function AdminPage() {
     }
   };
 
+  const uploadProductImage = async (itemId: string, file: File) => {
+    const extMatch = /\.([a-zA-Z0-9]+)$/.exec(file.name);
+    const ext = (extMatch?.[1] || "jpg").toLowerCase();
+    const path = `admin-uploads/${itemId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("products").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || undefined,
+    });
+    if (uploadError) throw uploadError;
+    return supabase.storage.from("products").getPublicUrl(path).data.publicUrl;
+  };
+
+  const handleProductFileUpload = async (
+    itemId: string,
+    field: "image_url" | "size_chart_url",
+    file: File,
+  ) => {
+    setError(null);
+    setNotice(null);
+    setUploadingKey(`${itemId}:${field}`);
+    try {
+      const url = await uploadProductImage(itemId, file);
+      const product = products.find((item) => item.id === itemId);
+      setProductDrafts((current) => ({
+        ...current,
+        [itemId]: {
+          image_url: current[itemId]?.image_url ?? product?.image_url ?? "",
+          size_chart_url: current[itemId]?.size_chart_url ?? product?.size_chart_url ?? "",
+          color_order: current[itemId]?.color_order ?? (product?.color_order ?? []).join(", "),
+          [field]: url,
+        },
+      }));
+      setNotice("Image uploaded — click Save to apply");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
+  const saveProductMedia = async (itemId: string) => {
+    const draft = productDrafts[itemId];
+    if (!draft) return;
+
+    setError(null);
+    setNotice(null);
+    setSavingProductId(itemId);
+    const colorOrder = draft.color_order
+      .split(",")
+      .map((color) => color.trim())
+      .filter(Boolean);
+    const { error: updateError } = await supabase.rpc("admin_update_item_media", {
+      p_item_id: itemId,
+      p_image_url: draft.image_url || null,
+      p_size_chart_url: draft.size_chart_url || null,
+      p_color_order: colorOrder.length ? colorOrder : null,
+    });
+    setSavingProductId(null);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    await loadAdminData(false);
+    setNotice("Product images updated");
+  };
+
+  const handleMediaFileUpload = async (mediaId: string, itemId: string, file: File) => {
+    setError(null);
+    setNotice(null);
+    setUploadingKey(mediaId);
+    try {
+      const url = await uploadProductImage(itemId, file);
+      setMediaDrafts((current) => ({
+        ...current,
+        [mediaId]: { ...current[mediaId], url },
+      }));
+      setNotice("Image uploaded — click Save to apply");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
+  const saveMedia = async (mediaId: string) => {
+    const draft = mediaDrafts[mediaId];
+    const row = media.find((item) => item.id === mediaId);
+    if (!draft || !row) return;
+
+    setError(null);
+    setNotice(null);
+    setSavingMediaId(mediaId);
+    const { error: updateError } = await supabase.rpc("admin_upsert_product_media", {
+      p_id: mediaId,
+      p_item_id: row.item_id,
+      p_color: draft.color || null,
+      p_label: draft.label,
+      p_url: draft.url,
+      p_kind: draft.kind,
+      p_sort_order: Number(draft.sort_order) || 0,
+    });
+    setSavingMediaId(null);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    await loadAdminData(false);
+    setNotice("Photo updated");
+  };
+
+  const deleteMedia = async (mediaId: string) => {
+    if (!window.confirm("Remove this photo from the product? The uploaded file stays in storage."))
+      return;
+
+    setError(null);
+    setNotice(null);
+    setDeletingMediaId(mediaId);
+    const { error: deleteError } = await supabase.rpc("admin_delete_product_media", {
+      p_id: mediaId,
+    });
+    setDeletingMediaId(null);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    await loadAdminData(false);
+    setNotice("Photo removed");
+  };
+
+  const handleNewMediaFileUpload = async (file: File) => {
+    if (!selectedProductId) return;
+    setError(null);
+    setNotice(null);
+    setUploadingKey("new");
+    try {
+      const url = await uploadProductImage(selectedProductId, file);
+      setNewMediaDraft((current) => ({ ...current, url }));
+      setNotice("Image uploaded — review details and click Add photo");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
+  const addMedia = async () => {
+    if (!selectedProductId) return;
+    if (!newMediaDraft.label.trim() || !newMediaDraft.url.trim()) {
+      setError("Photo needs a label and an image (upload or paste a URL)");
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setSavingMediaId("new");
+    const { error: insertError } = await supabase.rpc("admin_upsert_product_media", {
+      p_id: null,
+      p_item_id: selectedProductId,
+      p_color: newMediaDraft.color || null,
+      p_label: newMediaDraft.label,
+      p_url: newMediaDraft.url,
+      p_kind: newMediaDraft.kind,
+      p_sort_order: Number(newMediaDraft.sort_order) || 0,
+    });
+    setSavingMediaId(null);
+
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
+    setNewMediaDraft(EMPTY_NEW_MEDIA_DRAFT);
+    await loadAdminData(false);
+    setNotice("Photo added");
+  };
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -339,6 +635,15 @@ function AdminPage() {
     const filteredInventory = normalizedInventoryQuery
       ? inventory.filter((variant) => inventoryMatchesQuery(variant, normalizedInventoryQuery))
       : inventory;
+    const inventoryPageCount = Math.max(
+      1,
+      Math.ceil(filteredInventory.length / INVENTORY_PAGE_SIZE),
+    );
+    const safeInventoryPage = Math.min(inventoryPage, inventoryPageCount);
+    const pagedInventory = filteredInventory.slice(
+      (safeInventoryPage - 1) * INVENTORY_PAGE_SIZE,
+      safeInventoryPage * INVENTORY_PAGE_SIZE,
+    );
     const paymentCounts = PAYMENT_STATUSES.reduce<Record<string, number>>((counts, status) => {
       counts[status] = orders.filter((order) => order.payment_status === status).length;
       return counts;
@@ -370,8 +675,11 @@ function AdminPage() {
       filteredOrders,
       pagedOrders,
       filteredInventory,
+      pagedInventory,
       orderPageCount,
       safeOrderPage,
+      inventoryPageCount,
+      safeInventoryPage,
       paymentCounts,
       orderCounts,
       filteredReviews,
@@ -388,7 +696,16 @@ function AdminPage() {
     orderQuery,
     inventoryQuery,
     orderPage,
+    inventoryPage,
   ]);
+
+  const selectedProduct = products.find((product) => product.id === selectedProductId) ?? null;
+  const productDraft = (selectedProduct && productDrafts[selectedProduct.id]) || {
+    image_url: "",
+    size_chart_url: "",
+    color_order: "",
+  };
+  const selectedProductMedia = media.filter((row) => row.item_id === selectedProductId);
 
   if (loading || adminLoading) {
     return (
@@ -875,7 +1192,10 @@ function AdminPage() {
             <input
               id="admin-inventory-search"
               value={inventoryQuery}
-              onChange={(event) => setInventoryQuery(event.target.value)}
+              onChange={(event) => {
+                setInventoryQuery(event.target.value);
+                setInventoryPage(1);
+              }}
               className="jb-input"
               placeholder="Product, color, size, SKU"
             />
@@ -894,7 +1214,7 @@ function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {summary.filteredInventory.map((variant) => {
+                {summary.pagedInventory.map((variant) => {
                   const product = productFromVariant(variant);
                   const draft = stockDrafts[variant.id] ?? String(variant.stock_quantity ?? 0);
                   const changed = draft !== String(variant.stock_quantity ?? 0);
@@ -954,9 +1274,363 @@ function AdminPage() {
               </tbody>
             </table>
           </div>
+          <Pager
+            page={summary.safeInventoryPage}
+            pageCount={summary.inventoryPageCount}
+            total={summary.filteredInventory.length}
+            itemLabel="items"
+            onPrevious={() => setInventoryPage((page) => Math.max(1, page - 1))}
+            onNext={() =>
+              setInventoryPage((page) => Math.min(summary.inventoryPageCount, page + 1))
+            }
+          />
+        </section>
+
+        <section className="mt-10" style={primarySectionStyle}>
+          <SectionHeader eyebrow="Photos" title="Manage product images" />
+          <div style={filterBarStyle} aria-label="Choose a product">
+            {products.map((product) => {
+              const active = selectedProductId === product.id;
+              return (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() => setSelectedProductId(product.id)}
+                  style={{
+                    ...filterButtonStyle,
+                    borderColor: active ? "#fff" : "#333",
+                    background: active ? "#fff" : "#050505",
+                    color: active ? "#000" : "#fff",
+                  }}
+                >
+                  {product.name}
+                </button>
+              );
+            })}
+            {products.length === 0 && (
+              <div style={{ color: "#9a9a9a", fontSize: 13 }}>No products yet</div>
+            )}
+          </div>
+
+          {selectedProduct && (
+            <div className="grid gap-6">
+              <div style={reviewAdminCardStyle}>
+                <div className="jb-eyebrow">{selectedProduct.gender || "unisex"}</div>
+                <div style={{ color: "#fff", fontSize: 16, marginTop: 6 }}>
+                  {selectedProduct.name}
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="jb-label">Main image URL</label>
+                    <input
+                      value={productDraft.image_url}
+                      onChange={(event) =>
+                        setProductDrafts((current) => ({
+                          ...current,
+                          [selectedProduct.id]: {
+                            ...productDraft,
+                            image_url: event.target.value,
+                          },
+                        }))
+                      }
+                      className="jb-input"
+                      placeholder="https://..."
+                    />
+                    <UploadButton
+                      uploading={uploadingKey === `${selectedProduct.id}:image_url`}
+                      onFile={(file) =>
+                        handleProductFileUpload(selectedProduct.id, "image_url", file)
+                      }
+                    />
+                    {productDraft.image_url && (
+                      <img
+                        src={productDraft.image_url}
+                        alt="Main product"
+                        style={mediaPreviewStyle}
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className="jb-label">Size chart URL</label>
+                    <input
+                      value={productDraft.size_chart_url}
+                      onChange={(event) =>
+                        setProductDrafts((current) => ({
+                          ...current,
+                          [selectedProduct.id]: {
+                            ...productDraft,
+                            size_chart_url: event.target.value,
+                          },
+                        }))
+                      }
+                      className="jb-input"
+                      placeholder="https://..."
+                    />
+                    <UploadButton
+                      uploading={uploadingKey === `${selectedProduct.id}:size_chart_url`}
+                      onFile={(file) =>
+                        handleProductFileUpload(selectedProduct.id, "size_chart_url", file)
+                      }
+                    />
+                    {productDraft.size_chart_url && (
+                      <img
+                        src={productDraft.size_chart_url}
+                        alt="Size chart"
+                        style={mediaPreviewStyle}
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="jb-label">Color order (comma separated)</label>
+                  <input
+                    value={productDraft.color_order}
+                    onChange={(event) =>
+                      setProductDrafts((current) => ({
+                        ...current,
+                        [selectedProduct.id]: {
+                          ...productDraft,
+                          color_order: event.target.value,
+                        },
+                      }))
+                    }
+                    className="jb-input"
+                    placeholder="Black, Gray, Navy Blue"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="jb-btn-ghost inline-flex items-center gap-2 mt-4"
+                  onClick={() => saveProductMedia(selectedProduct.id)}
+                  disabled={savingProductId === selectedProduct.id}
+                  style={{ minHeight: 36, padding: "0 12px" }}
+                >
+                  <Save size={14} aria-hidden="true" />
+                  Save product images
+                </button>
+              </div>
+
+              <div style={reviewAdminCardStyle}>
+                <div style={{ color: "#fff", fontSize: 15, marginBottom: 12 }}>
+                  Gallery &amp; color photos
+                </div>
+                <div className="grid gap-3">
+                  {selectedProductMedia.map((row) => {
+                    const draft = mediaDrafts[row.id];
+                    if (!draft) return null;
+                    return (
+                      <div key={row.id} style={mediaRowStyle}>
+                        {draft.url && (
+                          <img src={draft.url} alt={draft.label} style={mediaThumbStyle} />
+                        )}
+                        <div className="grid sm:grid-cols-2 gap-3" style={{ flex: 1 }}>
+                          <input
+                            value={draft.color}
+                            onChange={(event) =>
+                              setMediaDrafts((current) => ({
+                                ...current,
+                                [row.id]: { ...draft, color: event.target.value },
+                              }))
+                            }
+                            className="jb-input"
+                            placeholder="Color (optional)"
+                            aria-label="Photo color"
+                          />
+                          <input
+                            value={draft.label}
+                            onChange={(event) =>
+                              setMediaDrafts((current) => ({
+                                ...current,
+                                [row.id]: { ...draft, label: event.target.value },
+                              }))
+                            }
+                            className="jb-input"
+                            placeholder="Label"
+                            aria-label="Photo label"
+                          />
+                          <select
+                            value={draft.kind}
+                            onChange={(event) =>
+                              setMediaDrafts((current) => ({
+                                ...current,
+                                [row.id]: { ...draft, kind: event.target.value as MediaKind },
+                              }))
+                            }
+                            style={controlStyle}
+                            aria-label="Photo kind"
+                          >
+                            <option value="gallery">gallery</option>
+                            <option value="thumbnail">thumbnail</option>
+                          </select>
+                          <input
+                            type="number"
+                            value={draft.sort_order}
+                            onChange={(event) =>
+                              setMediaDrafts((current) => ({
+                                ...current,
+                                [row.id]: { ...draft, sort_order: event.target.value },
+                              }))
+                            }
+                            style={controlStyle}
+                            aria-label="Sort order"
+                            placeholder="Sort order"
+                          />
+                          <input
+                            value={draft.url}
+                            onChange={(event) =>
+                              setMediaDrafts((current) => ({
+                                ...current,
+                                [row.id]: { ...draft, url: event.target.value },
+                              }))
+                            }
+                            className="jb-input"
+                            placeholder="Image URL"
+                            aria-label="Photo URL"
+                            style={{ gridColumn: "1 / -1" }}
+                          />
+                        </div>
+                        <div className="flex gap-2" style={{ flexShrink: 0 }}>
+                          <UploadButton
+                            uploading={uploadingKey === row.id}
+                            onFile={(file) => handleMediaFileUpload(row.id, row.item_id, file)}
+                          />
+                          <button
+                            type="button"
+                            className="jb-btn-ghost inline-flex items-center justify-center"
+                            onClick={() => saveMedia(row.id)}
+                            disabled={savingMediaId === row.id}
+                            style={{ minHeight: 36, padding: "0 10px" }}
+                            aria-label={`Save ${draft.label}`}
+                          >
+                            <Save size={14} aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="jb-btn-ghost inline-flex items-center justify-center"
+                            onClick={() => deleteMedia(row.id)}
+                            disabled={deletingMediaId === row.id}
+                            style={{ minHeight: 36, padding: "0 10px" }}
+                            aria-label={`Delete ${draft.label}`}
+                          >
+                            <Trash2 size={14} aria-hidden="true" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {selectedProductMedia.length === 0 && (
+                    <div style={{ color: "#9a9a9a", fontSize: 13 }}>
+                      No photos yet for this product
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ ...mediaRowStyle, marginTop: 16, borderStyle: "dashed" }}>
+                  {newMediaDraft.url && (
+                    <img src={newMediaDraft.url} alt="New" style={mediaThumbStyle} />
+                  )}
+                  <div className="grid sm:grid-cols-2 gap-3" style={{ flex: 1 }}>
+                    <input
+                      value={newMediaDraft.color}
+                      onChange={(event) =>
+                        setNewMediaDraft((current) => ({ ...current, color: event.target.value }))
+                      }
+                      className="jb-input"
+                      placeholder="Color (optional)"
+                      aria-label="New photo color"
+                    />
+                    <input
+                      value={newMediaDraft.label}
+                      onChange={(event) =>
+                        setNewMediaDraft((current) => ({ ...current, label: event.target.value }))
+                      }
+                      className="jb-input"
+                      placeholder="Label (e.g. Front)"
+                      aria-label="New photo label"
+                    />
+                    <select
+                      value={newMediaDraft.kind}
+                      onChange={(event) =>
+                        setNewMediaDraft((current) => ({
+                          ...current,
+                          kind: event.target.value as MediaKind,
+                        }))
+                      }
+                      style={controlStyle}
+                      aria-label="New photo kind"
+                    >
+                      <option value="gallery">gallery</option>
+                      <option value="thumbnail">thumbnail</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={newMediaDraft.sort_order}
+                      onChange={(event) =>
+                        setNewMediaDraft((current) => ({
+                          ...current,
+                          sort_order: event.target.value,
+                        }))
+                      }
+                      style={controlStyle}
+                      aria-label="New photo sort order"
+                      placeholder="Sort order"
+                    />
+                    <input
+                      value={newMediaDraft.url}
+                      onChange={(event) =>
+                        setNewMediaDraft((current) => ({ ...current, url: event.target.value }))
+                      }
+                      className="jb-input"
+                      placeholder="Image URL (or upload)"
+                      aria-label="New photo URL"
+                      style={{ gridColumn: "1 / -1" }}
+                    />
+                  </div>
+                  <div className="flex gap-2" style={{ flexShrink: 0 }}>
+                    <UploadButton
+                      uploading={uploadingKey === "new"}
+                      onFile={(file) => handleNewMediaFileUpload(file)}
+                    />
+                    <button
+                      type="button"
+                      className="jb-btn-ghost inline-flex items-center gap-2"
+                      onClick={addMedia}
+                      disabled={savingMediaId === "new"}
+                      style={{ minHeight: 36, padding: "0 12px" }}
+                    >
+                      Add photo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       </AdminShell>
     </Layout>
+  );
+}
+
+function UploadButton({ uploading, onFile }: { uploading: boolean; onFile: (file: File) => void }) {
+  return (
+    <label
+      className="jb-btn-ghost inline-flex items-center gap-2"
+      style={{ minHeight: 36, padding: "0 12px", cursor: "pointer" }}
+    >
+      <Upload size={14} aria-hidden="true" />
+      {uploading ? "Uploading" : "Upload"}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) onFile(file);
+        }}
+        style={{ display: "none" }}
+        disabled={uploading}
+      />
+    </label>
   );
 }
 
@@ -986,12 +1660,14 @@ function Pager({
   page,
   pageCount,
   total,
+  itemLabel = "orders",
   onPrevious,
   onNext,
 }: {
   page: number;
   pageCount: number;
   total: number;
+  itemLabel?: string;
   onPrevious: () => void;
   onNext: () => void;
 }) {
@@ -999,7 +1675,7 @@ function Pager({
   return (
     <div className="mt-4 flex items-center justify-between gap-3 flex-wrap" style={mutedText}>
       <span>
-        Page {page} of {pageCount} · {total} orders
+        Page {page} of {pageCount} · {total} {itemLabel}
       </span>
       <div className="flex gap-2">
         <button
@@ -1209,6 +1885,30 @@ const reviewAdminCardStyle = {
   border: "1px solid #262626",
   padding: 16,
   background: "#050505",
+};
+
+const mediaPreviewStyle = {
+  width: 120,
+  height: 120,
+  objectFit: "cover" as const,
+  border: "1px solid #262626",
+  marginTop: 10,
+};
+
+const mediaThumbStyle = {
+  width: 72,
+  height: 72,
+  objectFit: "cover" as const,
+  border: "1px solid #262626",
+  flexShrink: 0,
+};
+
+const mediaRowStyle = {
+  display: "flex",
+  gap: 12,
+  alignItems: "flex-start",
+  border: "1px solid #262626",
+  padding: 12,
 };
 
 const tableStyle = {
