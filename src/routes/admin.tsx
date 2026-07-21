@@ -603,10 +603,15 @@ function AdminPage() {
     if (loading) return;
     if (!user) {
       navigate({ to: "/login" });
-      return;
     }
-    if (!adminLoading && isAdmin) loadAdminData();
-  }, [user, loading, adminLoading, isAdmin, navigate]);
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (isAdmin) loadAdminData();
+    // Only re-run when admin status actually flips (e.g. sign in/out), not on
+    // every background admin-status poll — that used to wipe in-progress edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   useEffect(() => {
     if (isAdmin) loadAdminData();
