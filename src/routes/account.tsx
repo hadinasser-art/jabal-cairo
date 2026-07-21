@@ -96,7 +96,7 @@ function AccountPage() {
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) console.warn("favorites", error.message);
-        setFavorites((data as FavoriteRow[]) || []);
+        setFavorites((data as unknown as FavoriteRow[]) || []);
       });
   }, [user, loading, navigate]);
 
@@ -334,7 +334,12 @@ function FavoriteItem({ favorite }: { favorite: FavoriteRow }) {
 
   return (
     <div className="pc group">
-      <Link to="/product/$id" params={{ id: favorite.item.id }} style={{ display: "block" }}>
+      <Link
+        to="/product/$id"
+        params={{ id: favorite.item.id }}
+        search={{ color: favorite.variant?.color ?? null }}
+        style={{ display: "block" }}
+      >
         <div className="pc-img-wrap">
           {image ? (
             <img

@@ -21,7 +21,7 @@ export function ProductCard({ item }: { item: Item }) {
       <Link
         to="/product/$id"
         params={{ id: item.id }}
-        search={item.display_color ? { color: item.display_color } : {}}
+        search={{ color: item.display_color ?? null }}
         style={{ display: "block" }}
       >
         <div className="pc-img-wrap">

@@ -131,12 +131,18 @@ export function OfferPopup() {
         </div>
 
         <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 10 }}>
-          <Link to="/register" onClick={close} className="jb-btn" style={{ width: "100%" }}>
+          <Link
+            to="/register"
+            search={{ google: undefined }}
+            onClick={close}
+            className="jb-btn"
+            style={{ width: "100%" }}
+          >
             {t("offer.emailSignup")}
           </Link>
           <Link
             to="/register"
-            search={{ google: 1 } as never}
+            search={{ google: 1 }}
             onClick={close}
             className="jb-btn-ghost"
             style={{ width: "100%" }}

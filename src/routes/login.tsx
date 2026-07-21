@@ -106,7 +106,7 @@ function LoginPage() {
           <Link to="/forgot" className="hover:underline">
             {t("auth.forgot")}
           </Link>
-          <Link to="/register" className="hover:underline">
+          <Link to="/register" search={{ google: undefined }} className="hover:underline">
             {t("auth.register")}
           </Link>
         </div>

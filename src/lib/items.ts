@@ -126,9 +126,7 @@ async function fetchPurchaseCounts(): Promise<PurchaseCounts> {
   };
 
   try {
-    const { data, error } = await withTimeout(
-      supabase.rpc("get_item_purchase_counts").returns<PurchaseCountRow[]>(),
-    );
+    const { data, error } = await withTimeout(supabase.rpc("get_item_purchase_counts"));
     if (error) {
       console.warn("get_item_purchase_counts", error.message);
       return empty;
@@ -141,7 +139,8 @@ async function fetchPurchaseCounts(): Promise<PurchaseCounts> {
       itemsWithColorCounts: new Set<string>(),
     };
 
-    for (const row of data ?? []) {
+    const rows = (data ?? []) as unknown as PurchaseCountRow[];
+    for (const row of rows) {
       const count = Number(row.purchase_count || 0);
       if (!row.item_id || count <= 0) continue;
       counts.hasPurchases = true;

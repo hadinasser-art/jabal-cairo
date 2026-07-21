@@ -97,7 +97,12 @@ export function Layout({ children }: { children: ReactNode }) {
                   <Link to="/login" style={{ color: "#fff" }} className="hover:underline">
                     {t("nav.login")}
                   </Link>{" "}
-                  <Link to="/register" style={{ color: "#fff" }} className="hover:underline">
+                  <Link
+                    to="/register"
+                    search={{ google: undefined }}
+                    style={{ color: "#fff" }}
+                    className="hover:underline"
+                  >
                     {t("nav.register")}
                   </Link>
                 </>
@@ -250,7 +255,12 @@ export function Layout({ children }: { children: ReactNode }) {
                 <Link to="/login" onClick={() => setOpen(false)} style={mobileItem}>
                   {t("nav.login")}
                 </Link>
-                <Link to="/register" onClick={() => setOpen(false)} style={mobileItem}>
+                <Link
+                  to="/register"
+                  search={{ google: undefined }}
+                  onClick={() => setOpen(false)}
+                  style={mobileItem}
+                >
                   {t("nav.register")}
                 </Link>
               </>
