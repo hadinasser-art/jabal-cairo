@@ -102,14 +102,6 @@ type MediaDraft = {
   sort_order: string;
 };
 
-const EMPTY_NEW_MEDIA_DRAFT: MediaDraft = {
-  color: "",
-  label: "",
-  url: "",
-  kind: "gallery",
-  sort_order: "10",
-};
-
 type PaymentStatus = "pending" | "paid" | "failed" | "cod_pending" | "refunded";
 type OrderStatus = "new" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
 
@@ -146,7 +138,7 @@ function AdminPage() {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [productDrafts, setProductDrafts] = useState<Record<string, ProductDraft>>({});
   const [mediaDrafts, setMediaDrafts] = useState<Record<string, MediaDraft>>({});
-  const [newMediaDraft, setNewMediaDraft] = useState<MediaDraft>(EMPTY_NEW_MEDIA_DRAFT);
+  const [newColorNames, setNewColorNames] = useState<Record<string, string>>({});
   const [orderDrafts, setOrderDrafts] = useState<Record<string, OrderDraft>>({});
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
@@ -412,6 +404,21 @@ function AdminPage() {
     return supabase.storage.from("products").getPublicUrl(path).data.publicUrl;
   };
 
+  const persistProductMedia = async (itemId: string, draft: ProductDraft) => {
+    const colorOrder = draft.color_order
+      .split(",")
+      .map((color) => color.trim())
+      .filter(Boolean);
+    const { error: updateError } = await supabase.rpc("admin_update_item_media", {
+      p_item_id: itemId,
+      p_image_url: draft.image_url || null,
+      p_size_chart_url: draft.size_chart_url || null,
+      p_color_order: colorOrder.length ? colorOrder : null,
+    });
+    if (updateError) throw updateError;
+    await loadAdminData(false);
+  };
+
   const handleProductFileUpload = async (
     itemId: string,
     field: "image_url" | "size_chart_url",
@@ -423,20 +430,37 @@ function AdminPage() {
     try {
       const url = await uploadProductImage(itemId, file);
       const product = products.find((item) => item.id === itemId);
-      setProductDrafts((current) => ({
-        ...current,
-        [itemId]: {
-          image_url: current[itemId]?.image_url ?? product?.image_url ?? "",
-          size_chart_url: current[itemId]?.size_chart_url ?? product?.size_chart_url ?? "",
-          color_order: current[itemId]?.color_order ?? (product?.color_order ?? []).join(", "),
-          [field]: url,
-        },
-      }));
-      setNotice("Image uploaded — click Save to apply");
+      const nextDraft: ProductDraft = {
+        image_url: productDrafts[itemId]?.image_url ?? product?.image_url ?? "",
+        size_chart_url: productDrafts[itemId]?.size_chart_url ?? product?.size_chart_url ?? "",
+        color_order: productDrafts[itemId]?.color_order ?? (product?.color_order ?? []).join(", "),
+        [field]: url,
+      };
+      setProductDrafts((current) => ({ ...current, [itemId]: nextDraft }));
+      await persistProductMedia(itemId, nextDraft);
+      setNotice("Image updated");
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
       setUploadingKey(null);
+    }
+  };
+
+  const clearProductImage = async (itemId: string, field: "image_url" | "size_chart_url") => {
+    const draft = productDrafts[itemId];
+    if (!draft) return;
+    setError(null);
+    setNotice(null);
+    setSavingProductId(itemId);
+    const nextDraft: ProductDraft = { ...draft, [field]: "" };
+    setProductDrafts((current) => ({ ...current, [itemId]: nextDraft }));
+    try {
+      await persistProductMedia(itemId, nextDraft);
+      setNotice("Image removed");
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Update failed");
+    } finally {
+      setSavingProductId(null);
     }
   };
 
@@ -447,25 +471,14 @@ function AdminPage() {
     setError(null);
     setNotice(null);
     setSavingProductId(itemId);
-    const colorOrder = draft.color_order
-      .split(",")
-      .map((color) => color.trim())
-      .filter(Boolean);
-    const { error: updateError } = await supabase.rpc("admin_update_item_media", {
-      p_item_id: itemId,
-      p_image_url: draft.image_url || null,
-      p_size_chart_url: draft.size_chart_url || null,
-      p_color_order: colorOrder.length ? colorOrder : null,
-    });
-    setSavingProductId(null);
-
-    if (updateError) {
-      setError(updateError.message);
-      return;
+    try {
+      await persistProductMedia(itemId, draft);
+      setNotice("Product images updated");
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Update failed");
+    } finally {
+      setSavingProductId(null);
     }
-
-    await loadAdminData(false);
-    setNotice("Product images updated");
   };
 
   const handleMediaFileUpload = async (mediaId: string, itemId: string, file: File) => {
@@ -535,51 +548,55 @@ function AdminPage() {
     setNotice("Photo removed");
   };
 
-  const handleNewMediaFileUpload = async (file: File) => {
-    if (!selectedProductId) return;
+  const uploadPhotoForColor = async (
+    itemId: string,
+    color: string,
+    groupMedia: AdminMediaRow[],
+    file: File,
+  ) => {
+    const key = `add:${color || "none"}`;
     setError(null);
     setNotice(null);
-    setUploadingKey("new");
+    setUploadingKey(key);
     try {
-      const url = await uploadProductImage(selectedProductId, file);
-      setNewMediaDraft((current) => ({ ...current, url }));
-      setNotice("Image uploaded — review details and click Add photo");
+      const url = await uploadProductImage(itemId, file);
+      const nextSortOrder = groupMedia.length
+        ? Math.max(...groupMedia.map((row) => row.sort_order)) + 10
+        : 10;
+      const { error: insertError } = await supabase.rpc("admin_upsert_product_media", {
+        p_id: null,
+        p_item_id: itemId,
+        p_color: color || null,
+        p_label: `Photo ${groupMedia.length + 1}`,
+        p_url: url,
+        p_kind: "gallery",
+        p_sort_order: nextSortOrder,
+      });
+      if (insertError) throw insertError;
+
+      const draft = productDrafts[itemId];
+      if (color && draft) {
+        const existingColors = draft.color_order
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean);
+        if (!existingColors.includes(color)) {
+          const nextDraft: ProductDraft = {
+            ...draft,
+            color_order: [...existingColors, color].join(", "),
+          };
+          setProductDrafts((current) => ({ ...current, [itemId]: nextDraft }));
+          await persistProductMedia(itemId, nextDraft);
+        }
+      }
+
+      await loadAdminData(false);
+      setNotice("Photo added");
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
       setUploadingKey(null);
     }
-  };
-
-  const addMedia = async () => {
-    if (!selectedProductId) return;
-    if (!newMediaDraft.label.trim() || !newMediaDraft.url.trim()) {
-      setError("Photo needs a label and an image (upload or paste a URL)");
-      return;
-    }
-
-    setError(null);
-    setNotice(null);
-    setSavingMediaId("new");
-    const { error: insertError } = await supabase.rpc("admin_upsert_product_media", {
-      p_id: null,
-      p_item_id: selectedProductId,
-      p_color: newMediaDraft.color || null,
-      p_label: newMediaDraft.label,
-      p_url: newMediaDraft.url,
-      p_kind: newMediaDraft.kind,
-      p_sort_order: Number(newMediaDraft.sort_order) || 0,
-    });
-    setSavingMediaId(null);
-
-    if (insertError) {
-      setError(insertError.message);
-      return;
-    }
-
-    setNewMediaDraft(EMPTY_NEW_MEDIA_DRAFT);
-    await loadAdminData(false);
-    setNotice("Photo added");
   };
 
   useEffect(() => {
@@ -705,7 +722,126 @@ function AdminPage() {
     size_chart_url: "",
     color_order: "",
   };
-  const selectedProductMedia = media.filter((row) => row.item_id === selectedProductId);
+  const selectedProductMedia = media
+    .filter((row) => row.item_id === selectedProductId)
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const knownColors = productDraft.color_order
+    .split(",")
+    .map((color) => color.trim())
+    .filter(Boolean);
+  const extraColors = Array.from(
+    new Set(
+      selectedProductMedia
+        .map((row) => row.color)
+        .filter((color): color is string => color != null && !knownColors.includes(color)),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
+  const colorGroups = [...knownColors, ...extraColors];
+  const uncategorizedMedia = selectedProductMedia.filter((row) => !row.color);
+  const newColorName = (selectedProduct && newColorNames[selectedProduct.id]) || "";
+
+  const renderMediaTile = (row: AdminMediaRow) => {
+    const draft = mediaDrafts[row.id];
+    if (!draft) return null;
+    return (
+      <div key={row.id} style={tileCardStyle}>
+        {draft.url ? (
+          <img src={draft.url} alt={draft.label} style={tileImageStyle} />
+        ) : (
+          <div style={{ ...tileImageStyle, ...emptyTileStyle }}>No image</div>
+        )}
+        <input
+          value={draft.label}
+          onChange={(event) =>
+            setMediaDrafts((current) => ({
+              ...current,
+              [row.id]: { ...draft, label: event.target.value },
+            }))
+          }
+          className="jb-input"
+          placeholder="Label"
+          aria-label="Photo label"
+          style={{ marginTop: 8 }}
+        />
+        <div className="flex gap-2" style={{ marginTop: 8 }}>
+          <select
+            value={draft.kind}
+            onChange={(event) =>
+              setMediaDrafts((current) => ({
+                ...current,
+                [row.id]: { ...draft, kind: event.target.value as MediaKind },
+              }))
+            }
+            style={{ ...controlStyle, flex: 1 }}
+            aria-label="Photo kind"
+          >
+            <option value="gallery">gallery</option>
+            <option value="thumbnail">thumbnail</option>
+          </select>
+          <input
+            type="number"
+            value={draft.sort_order}
+            onChange={(event) =>
+              setMediaDrafts((current) => ({
+                ...current,
+                [row.id]: { ...draft, sort_order: event.target.value },
+              }))
+            }
+            style={{ ...controlStyle, width: 70 }}
+            aria-label="Sort order"
+            placeholder="Order"
+          />
+        </div>
+        <select
+          value={draft.color}
+          onChange={(event) =>
+            setMediaDrafts((current) => ({
+              ...current,
+              [row.id]: { ...draft, color: event.target.value },
+            }))
+          }
+          style={{ ...controlStyle, marginTop: 8 }}
+          aria-label="Photo color group"
+        >
+          <option value="">No color</option>
+          {colorGroups.map((groupColor) => (
+            <option key={groupColor} value={groupColor}>
+              {groupColor}
+            </option>
+          ))}
+          {draft.color && !colorGroups.includes(draft.color) && (
+            <option value={draft.color}>{draft.color}</option>
+          )}
+        </select>
+        <div className="flex gap-2" style={{ marginTop: 8 }}>
+          <UploadButton
+            uploading={uploadingKey === row.id}
+            onFile={(file) => handleMediaFileUpload(row.id, row.item_id, file)}
+          />
+          <button
+            type="button"
+            className="jb-btn-ghost inline-flex items-center justify-center"
+            onClick={() => saveMedia(row.id)}
+            disabled={savingMediaId === row.id}
+            style={{ minHeight: 36, padding: "0 10px" }}
+            aria-label={`Save ${draft.label}`}
+          >
+            <Save size={14} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="jb-btn-ghost inline-flex items-center justify-center"
+            onClick={() => deleteMedia(row.id)}
+            disabled={deletingMediaId === row.id}
+            style={{ minHeight: 36, padding: "0 10px" }}
+            aria-label={`Delete ${draft.label}`}
+          >
+            <Trash2 size={14} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   if (loading || adminLoading) {
     return (
@@ -1321,64 +1457,68 @@ function AdminPage() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="jb-label">Main image URL</label>
-                    <input
-                      value={productDraft.image_url}
-                      onChange={(event) =>
-                        setProductDrafts((current) => ({
-                          ...current,
-                          [selectedProduct.id]: {
-                            ...productDraft,
-                            image_url: event.target.value,
-                          },
-                        }))
-                      }
-                      className="jb-input"
-                      placeholder="https://..."
-                    />
-                    <UploadButton
-                      uploading={uploadingKey === `${selectedProduct.id}:image_url`}
-                      onFile={(file) =>
-                        handleProductFileUpload(selectedProduct.id, "image_url", file)
-                      }
-                    />
-                    {productDraft.image_url && (
+                    <label className="jb-label">Main image</label>
+                    {productDraft.image_url ? (
                       <img
                         src={productDraft.image_url}
                         alt="Main product"
                         style={mediaPreviewStyle}
                       />
+                    ) : (
+                      <div style={{ ...mediaPreviewStyle, ...emptyTileStyle }}>No image</div>
                     )}
+                    <div className="flex gap-2 mt-2">
+                      <UploadButton
+                        uploading={uploadingKey === `${selectedProduct.id}:image_url`}
+                        onFile={(file) =>
+                          handleProductFileUpload(selectedProduct.id, "image_url", file)
+                        }
+                      />
+                      {productDraft.image_url && (
+                        <button
+                          type="button"
+                          className="jb-btn-ghost inline-flex items-center justify-center"
+                          onClick={() => clearProductImage(selectedProduct.id, "image_url")}
+                          disabled={savingProductId === selectedProduct.id}
+                          style={{ minHeight: 36, padding: "0 10px" }}
+                          aria-label="Remove main image"
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div>
-                    <label className="jb-label">Size chart URL</label>
-                    <input
-                      value={productDraft.size_chart_url}
-                      onChange={(event) =>
-                        setProductDrafts((current) => ({
-                          ...current,
-                          [selectedProduct.id]: {
-                            ...productDraft,
-                            size_chart_url: event.target.value,
-                          },
-                        }))
-                      }
-                      className="jb-input"
-                      placeholder="https://..."
-                    />
-                    <UploadButton
-                      uploading={uploadingKey === `${selectedProduct.id}:size_chart_url`}
-                      onFile={(file) =>
-                        handleProductFileUpload(selectedProduct.id, "size_chart_url", file)
-                      }
-                    />
-                    {productDraft.size_chart_url && (
+                    <label className="jb-label">Size chart</label>
+                    {productDraft.size_chart_url ? (
                       <img
                         src={productDraft.size_chart_url}
                         alt="Size chart"
                         style={mediaPreviewStyle}
                       />
+                    ) : (
+                      <div style={{ ...mediaPreviewStyle, ...emptyTileStyle }}>No image</div>
                     )}
+                    <div className="flex gap-2 mt-2">
+                      <UploadButton
+                        uploading={uploadingKey === `${selectedProduct.id}:size_chart_url`}
+                        onFile={(file) =>
+                          handleProductFileUpload(selectedProduct.id, "size_chart_url", file)
+                        }
+                      />
+                      {productDraft.size_chart_url && (
+                        <button
+                          type="button"
+                          className="jb-btn-ghost inline-flex items-center justify-center"
+                          onClick={() => clearProductImage(selectedProduct.id, "size_chart_url")}
+                          disabled={savingProductId === selectedProduct.id}
+                          style={{ minHeight: 36, padding: "0 10px" }}
+                          aria-label="Remove size chart"
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -1397,210 +1537,86 @@ function AdminPage() {
                     className="jb-input"
                     placeholder="Black, Gray, Navy Blue"
                   />
+                  <button
+                    type="button"
+                    className="jb-btn-ghost inline-flex items-center gap-2 mt-2"
+                    onClick={() => saveProductMedia(selectedProduct.id)}
+                    disabled={savingProductId === selectedProduct.id}
+                    style={{ minHeight: 36, padding: "0 12px" }}
+                  >
+                    <Save size={14} aria-hidden="true" />
+                    Save color order
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="jb-btn-ghost inline-flex items-center gap-2 mt-4"
-                  onClick={() => saveProductMedia(selectedProduct.id)}
-                  disabled={savingProductId === selectedProduct.id}
-                  style={{ minHeight: 36, padding: "0 12px" }}
-                >
-                  <Save size={14} aria-hidden="true" />
-                  Save product images
-                </button>
               </div>
 
               <div style={reviewAdminCardStyle}>
                 <div style={{ color: "#fff", fontSize: 15, marginBottom: 12 }}>
-                  Gallery &amp; color photos
+                  Gallery photos, grouped by color
                 </div>
-                <div className="grid gap-3">
-                  {selectedProductMedia.map((row) => {
-                    const draft = mediaDrafts[row.id];
-                    if (!draft) return null;
+                <div className="grid gap-5">
+                  {colorGroups.map((color) => {
+                    const groupMedia = selectedProductMedia.filter((row) => row.color === color);
                     return (
-                      <div key={row.id} style={mediaRowStyle}>
-                        {draft.url && (
-                          <img src={draft.url} alt={draft.label} style={mediaThumbStyle} />
-                        )}
-                        <div className="grid sm:grid-cols-2 gap-3" style={{ flex: 1 }}>
-                          <input
-                            value={draft.color}
-                            onChange={(event) =>
-                              setMediaDrafts((current) => ({
-                                ...current,
-                                [row.id]: { ...draft, color: event.target.value },
-                              }))
+                      <div key={color} style={groupCardStyle}>
+                        <div style={groupHeaderStyle}>{color}</div>
+                        <div style={tileGridStyle}>
+                          {groupMedia.map((row) => renderMediaTile(row))}
+                          <AddPhotoTile
+                            uploading={uploadingKey === `add:${color}`}
+                            onFile={(file) =>
+                              uploadPhotoForColor(selectedProduct.id, color, groupMedia, file)
                             }
-                            className="jb-input"
-                            placeholder="Color (optional)"
-                            aria-label="Photo color"
                           />
-                          <input
-                            value={draft.label}
-                            onChange={(event) =>
-                              setMediaDrafts((current) => ({
-                                ...current,
-                                [row.id]: { ...draft, label: event.target.value },
-                              }))
-                            }
-                            className="jb-input"
-                            placeholder="Label"
-                            aria-label="Photo label"
-                          />
-                          <select
-                            value={draft.kind}
-                            onChange={(event) =>
-                              setMediaDrafts((current) => ({
-                                ...current,
-                                [row.id]: { ...draft, kind: event.target.value as MediaKind },
-                              }))
-                            }
-                            style={controlStyle}
-                            aria-label="Photo kind"
-                          >
-                            <option value="gallery">gallery</option>
-                            <option value="thumbnail">thumbnail</option>
-                          </select>
-                          <input
-                            type="number"
-                            value={draft.sort_order}
-                            onChange={(event) =>
-                              setMediaDrafts((current) => ({
-                                ...current,
-                                [row.id]: { ...draft, sort_order: event.target.value },
-                              }))
-                            }
-                            style={controlStyle}
-                            aria-label="Sort order"
-                            placeholder="Sort order"
-                          />
-                          <input
-                            value={draft.url}
-                            onChange={(event) =>
-                              setMediaDrafts((current) => ({
-                                ...current,
-                                [row.id]: { ...draft, url: event.target.value },
-                              }))
-                            }
-                            className="jb-input"
-                            placeholder="Image URL"
-                            aria-label="Photo URL"
-                            style={{ gridColumn: "1 / -1" }}
-                          />
-                        </div>
-                        <div className="flex gap-2" style={{ flexShrink: 0 }}>
-                          <UploadButton
-                            uploading={uploadingKey === row.id}
-                            onFile={(file) => handleMediaFileUpload(row.id, row.item_id, file)}
-                          />
-                          <button
-                            type="button"
-                            className="jb-btn-ghost inline-flex items-center justify-center"
-                            onClick={() => saveMedia(row.id)}
-                            disabled={savingMediaId === row.id}
-                            style={{ minHeight: 36, padding: "0 10px" }}
-                            aria-label={`Save ${draft.label}`}
-                          >
-                            <Save size={14} aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            className="jb-btn-ghost inline-flex items-center justify-center"
-                            onClick={() => deleteMedia(row.id)}
-                            disabled={deletingMediaId === row.id}
-                            style={{ minHeight: 36, padding: "0 10px" }}
-                            aria-label={`Delete ${draft.label}`}
-                          >
-                            <Trash2 size={14} aria-hidden="true" />
-                          </button>
                         </div>
                       </div>
                     );
                   })}
-                  {selectedProductMedia.length === 0 && (
+
+                  {uncategorizedMedia.length > 0 && (
+                    <div style={groupCardStyle}>
+                      <div style={groupHeaderStyle}>No color</div>
+                      <div style={tileGridStyle}>
+                        {uncategorizedMedia.map((row) => renderMediaTile(row))}
+                      </div>
+                    </div>
+                  )}
+
+                  {colorGroups.length === 0 && uncategorizedMedia.length === 0 && (
                     <div style={{ color: "#9a9a9a", fontSize: 13 }}>
                       No photos yet for this product
                     </div>
                   )}
                 </div>
 
-                <div style={{ ...mediaRowStyle, marginTop: 16, borderStyle: "dashed" }}>
-                  {newMediaDraft.url && (
-                    <img src={newMediaDraft.url} alt="New" style={mediaThumbStyle} />
-                  )}
-                  <div className="grid sm:grid-cols-2 gap-3" style={{ flex: 1 }}>
+                <div className="mt-5 flex items-end gap-2 flex-wrap">
+                  <div>
+                    <label className="jb-label">Add a new color</label>
                     <input
-                      value={newMediaDraft.color}
+                      value={newColorName}
                       onChange={(event) =>
-                        setNewMediaDraft((current) => ({ ...current, color: event.target.value }))
-                      }
-                      className="jb-input"
-                      placeholder="Color (optional)"
-                      aria-label="New photo color"
-                    />
-                    <input
-                      value={newMediaDraft.label}
-                      onChange={(event) =>
-                        setNewMediaDraft((current) => ({ ...current, label: event.target.value }))
-                      }
-                      className="jb-input"
-                      placeholder="Label (e.g. Front)"
-                      aria-label="New photo label"
-                    />
-                    <select
-                      value={newMediaDraft.kind}
-                      onChange={(event) =>
-                        setNewMediaDraft((current) => ({
+                        setNewColorNames((current) => ({
                           ...current,
-                          kind: event.target.value as MediaKind,
+                          [selectedProduct.id]: event.target.value,
                         }))
                       }
-                      style={controlStyle}
-                      aria-label="New photo kind"
-                    >
-                      <option value="gallery">gallery</option>
-                      <option value="thumbnail">thumbnail</option>
-                    </select>
-                    <input
-                      type="number"
-                      value={newMediaDraft.sort_order}
-                      onChange={(event) =>
-                        setNewMediaDraft((current) => ({
-                          ...current,
-                          sort_order: event.target.value,
-                        }))
-                      }
-                      style={controlStyle}
-                      aria-label="New photo sort order"
-                      placeholder="Sort order"
-                    />
-                    <input
-                      value={newMediaDraft.url}
-                      onChange={(event) =>
-                        setNewMediaDraft((current) => ({ ...current, url: event.target.value }))
-                      }
                       className="jb-input"
-                      placeholder="Image URL (or upload)"
-                      aria-label="New photo URL"
-                      style={{ gridColumn: "1 / -1" }}
+                      placeholder="e.g. Forest Green"
+                      style={{ minWidth: 220 }}
                     />
                   </div>
-                  <div className="flex gap-2" style={{ flexShrink: 0 }}>
-                    <UploadButton
-                      uploading={uploadingKey === "new"}
-                      onFile={(file) => handleNewMediaFileUpload(file)}
-                    />
-                    <button
-                      type="button"
-                      className="jb-btn-ghost inline-flex items-center gap-2"
-                      onClick={addMedia}
-                      disabled={savingMediaId === "new"}
-                      style={{ minHeight: 36, padding: "0 12px" }}
-                    >
-                      Add photo
-                    </button>
-                  </div>
+                  <UploadButton
+                    uploading={uploadingKey === `add:${newColorName.trim() || "none"}`}
+                    onFile={(file) => {
+                      const color = newColorName.trim();
+                      if (!color) {
+                        setError("Type a color name first");
+                        return;
+                      }
+                      setNewColorNames((current) => ({ ...current, [selectedProduct.id]: "" }));
+                      uploadPhotoForColor(selectedProduct.id, color, [], file);
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -1619,6 +1635,26 @@ function UploadButton({ uploading, onFile }: { uploading: boolean; onFile: (file
     >
       <Upload size={14} aria-hidden="true" />
       {uploading ? "Uploading" : "Upload"}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) onFile(file);
+        }}
+        style={{ display: "none" }}
+        disabled={uploading}
+      />
+    </label>
+  );
+}
+
+function AddPhotoTile({ uploading, onFile }: { uploading: boolean; onFile: (file: File) => void }) {
+  return (
+    <label style={addTileStyle}>
+      <Upload size={18} aria-hidden="true" />
+      <span style={{ marginTop: 6 }}>{uploading ? "Uploading" : "Add photo"}</span>
       <input
         type="file"
         accept="image/*"
@@ -1895,20 +1931,59 @@ const mediaPreviewStyle = {
   marginTop: 10,
 };
 
-const mediaThumbStyle = {
-  width: 72,
-  height: 72,
-  objectFit: "cover" as const,
-  border: "1px solid #262626",
-  flexShrink: 0,
+const emptyTileStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#555",
+  fontSize: 11,
+  background: "#0a0a0a",
 };
 
-const mediaRowStyle = {
-  display: "flex",
-  gap: 12,
-  alignItems: "flex-start",
+const groupCardStyle = {
   border: "1px solid #262626",
-  padding: 12,
+  padding: 14,
+  background: "#0a0a0a",
+};
+
+const groupHeaderStyle = {
+  color: "#fff",
+  fontSize: 13,
+  fontWeight: 500,
+  marginBottom: 12,
+  textTransform: "capitalize" as const,
+};
+
+const tileGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+  gap: 12,
+};
+
+const tileCardStyle = {
+  border: "1px solid #262626",
+  padding: 10,
+  background: "#050505",
+};
+
+const tileImageStyle = {
+  width: "100%",
+  height: 120,
+  objectFit: "cover" as const,
+  border: "1px solid #262626",
+};
+
+const addTileStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  alignItems: "center",
+  justifyContent: "center",
+  height: "100%",
+  minHeight: 140,
+  border: "1px dashed #333",
+  color: "#9a9a9a",
+  fontSize: 12,
+  cursor: "pointer",
 };
 
 const tableStyle = {
