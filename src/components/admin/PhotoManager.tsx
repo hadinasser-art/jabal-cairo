@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/lib/supabase";
+import { SIZE_ORDER, supabase } from "@/lib/supabase";
 
 interface PhotoManagerProps {
   products: AdminProductRow[];
@@ -267,7 +267,55 @@ export function PhotoManager({
       onError("That color group already exists");
       return;
     }
-    if (await persistColorOrder([...colors, color], `${color} added`)) setNewColor("");
+    if (!(await persistColorOrder([...colors, color], `${color} added`)) || !selectedProduct)
+      return;
+    setNewColor("");
+
+    setColorBusy(color);
+    const { data, error } = await supabase.rpc("admin_create_product_variants", {
+      p_item_id: selectedProduct.id,
+      p_color: color,
+      p_sizes: [...SIZE_ORDER],
+    });
+    setColorBusy(null);
+    if (error) {
+      onError(
+        `${color} was added, but sizes could not be created automatically: ${error.message}. Add stock for it from the Inventory tab.`,
+      );
+      return;
+    }
+    type CreatedVariant = {
+      variant_id: string;
+      item_id: string;
+      color: string;
+      size: string;
+      stock_quantity: number;
+      sku: string | null;
+      updated_at: string | null;
+    };
+    const created: AdminInventoryRow[] = ((data as CreatedVariant[] | null) || []).map((row) => ({
+      id: row.variant_id,
+      item_id: row.item_id,
+      color: row.color,
+      size: row.size,
+      stock_quantity: row.stock_quantity,
+      sku: row.sku,
+      updated_at: row.updated_at,
+      item: {
+        id: selectedProduct.id,
+        name: selectedProduct.name,
+        gender: selectedProduct.gender,
+        stock_quantity: null,
+        sold_out: null,
+      },
+    }));
+    onInventoryChange((current) => [
+      ...current.filter((row) => !(row.item_id === selectedProduct.id && row.color === color)),
+      ...created,
+    ]);
+    onNotice(
+      `${color} added with sizes ${SIZE_ORDER.join(", ")} at 0 stock. Set stock in the Inventory tab to make it purchasable.`,
+    );
   };
 
   const renameColor = async (oldColor: string, nextName: string) => {
