@@ -254,8 +254,11 @@ function ProductPage() {
     );
 
   const hasVariants = variants.length > 0;
+  const mediaColors = mediaConfig.media
+    .map((row) => row.color)
+    .filter((c): c is string => Boolean(c));
   const colorOptions = hasVariants
-    ? Array.from(new Set(variants.map((variant) => variant.color)))
+    ? Array.from(new Set([...variants.map((variant) => variant.color), ...mediaColors]))
     : item.color || [];
   const sizeOptions = hasVariants
     ? sortSizes(
