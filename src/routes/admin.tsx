@@ -33,7 +33,7 @@ function AdminPage() {
 
   if (loading || adminLoading) {
     return (
-      <Layout>
+      <Layout showWhatsApp={false}>
         <AdminShell>
           <p className="text-sm text-muted-foreground">Loading dashboard…</p>
         </AdminShell>
@@ -45,7 +45,7 @@ function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <Layout>
+      <Layout showWhatsApp={false}>
         <AdminShell>
           <Card className="max-w-lg rounded-none bg-background shadow-none">
             <CardHeader>
@@ -65,7 +65,7 @@ function AdminPage() {
   }
 
   return (
-    <Layout>
+    <Layout showWhatsApp={false}>
       <AdminShell>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

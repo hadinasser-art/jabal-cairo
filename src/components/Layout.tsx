@@ -7,7 +7,48 @@ import { JABAL_LOGO_URL, JABAL_SUPPORT_EMAIL, JABAL_SUPPORT_PHONE } from "@/lib/
 import { OfferTopBar } from "@/components/OfferTopBar";
 import { useI18n, type Lang } from "@/lib/i18n";
 
-export function Layout({ children }: { children: ReactNode }) {
+function whatsappHref(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  const intl = digits.startsWith("0") ? `20${digits.slice(1)}` : digits;
+  return `https://wa.me/${intl}`;
+}
+
+function WhatsAppButton() {
+  return (
+    <a
+      href={whatsappHref(JABAL_SUPPORT_PHONE)}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat on WhatsApp"
+      title="Chat on WhatsApp"
+      className="fixed z-[200] inline-flex items-center justify-center"
+      style={{
+        insetInlineEnd: 20,
+        bottom: 20,
+        width: 56,
+        height: 56,
+        borderRadius: "50%",
+        background: "#25D366",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+      }}
+    >
+      <svg viewBox="0 0 32 32" width={32} height={32} aria-hidden="true">
+        <path
+          fill="#fff"
+          d="M16.004 3C9.373 3 4 8.373 4 15.004c0 2.386.674 4.612 1.84 6.502L4 29l7.68-1.812a11.94 11.94 0 0 0 4.324.812H16c6.63 0 12-5.373 12-12.004C28 8.373 22.63 3 16.004 3zm6.994 17.03c-.294.826-1.457 1.516-2.386 1.71-.634.132-1.462.238-4.248-.912-3.564-1.475-5.86-5.084-6.038-5.32-.176-.236-1.446-1.926-1.446-3.674 0-1.748.916-2.606 1.24-2.964.324-.358.706-.448.942-.448.236 0 .472.002.678.012.218.01.51-.083.798.608.294.708.998 2.456 1.084 2.634.088.178.146.386.03.622-.116.236-.176.386-.352.594-.176.208-.372.464-.53.624-.176.176-.36.368-.154.72.206.352.916 1.51 1.966 2.446 1.35 1.204 2.488 1.578 2.84 1.754.352.176.558.148.764-.088.206-.236.882-1.028 1.118-1.38.236-.352.472-.294.796-.176.324.118 2.06.972 2.414 1.148.352.176.588.264.674.412.088.148.088.856-.206 1.682z"
+        />
+      </svg>
+    </a>
+  );
+}
+
+export function Layout({
+  children,
+  showWhatsApp = true,
+}: {
+  children: ReactNode;
+  showWhatsApp?: boolean;
+}) {
   const { count } = useCart();
   const { user, isAdmin, signOut } = useAuth();
   const { lang, setLang, t } = useI18n();
@@ -325,6 +366,8 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </footer>
+
+      {showWhatsApp && <WhatsAppButton />}
     </div>
   );
 }
