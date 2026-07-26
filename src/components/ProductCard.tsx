@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { formatPrice, sortSizes, type Item } from "@/lib/supabase";
@@ -111,7 +112,13 @@ export function ProductCard({ item }: { item: Item }) {
       </Link>
       <FavoriteButton itemId={item.id} itemName={item.name} className="pc-favorite" />
       {!soldOut && (
-        <button type="button" className="jb-btn mt-3" style={{ width: "100%" }} onClick={handleAddClick}>
+        <button
+          type="button"
+          className="jb-btn mt-3"
+          style={{ width: "100%", gap: 8 }}
+          onClick={handleAddClick}
+        >
+          <ShoppingBag size={15} strokeWidth={1.8} aria-hidden="true" />
           {t("card.add")}
         </button>
       )}
