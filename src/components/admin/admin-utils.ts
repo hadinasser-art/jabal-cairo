@@ -131,6 +131,13 @@ export function sortInventory(rows: AdminInventoryRow[]) {
   });
 }
 
+export function moveInArray<T>(items: T[], from: number, to: number) {
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
 function sizeSortValue(size: string) {
   const order = ["S", "M", "L", "XL", "XXL"];
   const index = order.indexOf(size.trim().toUpperCase());

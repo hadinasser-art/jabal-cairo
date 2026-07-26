@@ -76,6 +76,10 @@ export type AdminMediaRow = {
   updated_at: string | null;
 };
 
+export type PhotoDraft = { label: string; kind: MediaKind };
+
+export type ProductAssetField = "image_url" | "size_chart_url";
+
 export type UploadJob = {
   id: string;
   color: string | null;
@@ -132,3 +136,13 @@ export const REVIEW_STATUS_FILTERS: (ReviewStatus | "all")[] = [
 ];
 export const PAGE_SIZE = 12;
 export const INVENTORY_PAGE_SIZE = 10;
+
+export const ADMIN_SECTIONS = [
+  "overview",
+  "orders",
+  "inventory",
+  "photos",
+  "reviews",
+  "revenue",
+] as const;
+export type AdminSection = (typeof ADMIN_SECTIONS)[number];
