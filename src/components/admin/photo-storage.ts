@@ -1,14 +1,23 @@
+import { compressProductImage } from "@/components/admin/image-compression";
 import { supabase } from "@/lib/supabase";
+
+/**
+ * Every upload gets a unique path, so the bytes behind a URL never change and the
+ * CDN can hold them indefinitely. The previous one-hour TTL made returning visitors
+ * re-download the full gallery, which is what was burning through cached egress.
+ */
+export const IMAGE_CACHE_CONTROL = "31536000";
 
 export async function uploadProductImage(itemId: string, file: File) {
   if (!file.type.startsWith("image/")) throw new Error(`${file.name} is not an image`);
-  const extMatch = /\.([a-zA-Z0-9]+)$/.exec(file.name);
+  const optimized = await compressProductImage(file);
+  const extMatch = /\.([a-zA-Z0-9]+)$/.exec(optimized.name);
   const ext = (extMatch?.[1] || "jpg").toLowerCase();
   const path = `admin-uploads/${itemId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-  const { error } = await supabase.storage.from("products").upload(path, file, {
-    cacheControl: "3600",
+  const { error } = await supabase.storage.from("products").upload(path, optimized, {
+    cacheControl: IMAGE_CACHE_CONTROL,
     upsert: false,
-    contentType: file.type || undefined,
+    contentType: optimized.type || undefined,
   });
   if (error) throw error;
   return {
