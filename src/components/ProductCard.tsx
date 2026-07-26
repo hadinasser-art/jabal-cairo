@@ -1,7 +1,11 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ShoppingBag } from "lucide-react";
+import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { formatPrice, sortSizes, type Item } from "@/lib/supabase";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { useCart } from "@/lib/cart";
+import { notifyAddedToBag } from "@/lib/notify";
 
 const OVERSIZED_TSHIRT_PRODUCT_ID = "c5d77496-59d1-4dc5-baf0-1d6f34352ea9";
 const OVERSIZED_TSHIRT_COLOR_ORDER = ["Orange", "Navy Blue", "Baby Blue"];
@@ -10,11 +14,48 @@ const OVERSIZED_TSHIRT_CARD_IMAGE_URL =
 
 export function ProductCard({ item }: { item: Item }) {
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const { addItem } = useCart();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const imageUrl = getCardImageUrl(item);
   const swatches = sortCardColors(item);
   const sizes = sortSizes(item.size || []);
   const soldOut = item.sold_out || item.stock_quantity <= 0;
+
+  const addToCart = (size: string | null) => {
+    const color = item.display_color ?? swatches[0] ?? null;
+    addItem({
+      id: item.id,
+      variantId: null,
+      name: item.name,
+      price_egp: item.price_egp,
+      image_url: imageUrl,
+      selectedSize: size,
+      selectedColor: color,
+      quantity: 1,
+      stock_quantity: item.stock_quantity,
+    });
+    notifyAddedToBag({
+      name: item.name,
+      size,
+      color,
+      onView: () => navigate({ to: "/cart" }),
+      t,
+    });
+    setPickerOpen(false);
+  };
+
+  const handleCartClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (soldOut) return;
+    if (sizes.length > 1) {
+      setPickerOpen((open) => !open);
+      return;
+    }
+    addToCart(sizes[0] ?? null);
+  };
 
   return (
     <div className="pc group">
@@ -31,6 +72,38 @@ export function ProductCard({ item }: { item: Item }) {
             <div style={{ width: "100%", height: "100%", background: "#141414" }} />
           )}
           {soldOut && <div className="pc-soldout">{t("card.soldout")}</div>}
+          {sizes.length > 1 && (
+            <div
+              className={`pc-quickadd${pickerOpen ? " is-open" : ""}`}
+              onClick={(e) => e.preventDefault()}
+            >
+              <div className="flex flex-wrap justify-center gap-[10px]">
+                {sizes.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      addToCart(size);
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid #000",
+                      color: "#000",
+                      padding: "4px 8px",
+                      fontSize: 11,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="mt-3">
           <div style={{ fontSize: 13, color: "#fff", overflowWrap: "anywhere" }}>{item.name}</div>
@@ -72,6 +145,28 @@ export function ProductCard({ item }: { item: Item }) {
         </div>
       </Link>
       <FavoriteButton itemId={item.id} itemName={item.name} className="pc-favorite" />
+      {!soldOut && (
+        <button
+          type="button"
+          className="pc-cart"
+          onClick={handleCartClick}
+          aria-label={t("card.add")}
+          title={t("card.add")}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 38,
+            height: 38,
+            border: "1px solid #262626",
+            background: "rgba(0,0,0,0.72)",
+            color: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          <ShoppingBag size={17} strokeWidth={1.8} aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 }
