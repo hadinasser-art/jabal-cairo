@@ -43,6 +43,7 @@ const DICT: Dict = {
   "card.add": { en: "Add to cart", ar: "أضف إلى الحقيبة" },
   "card.soldout": { en: "Sold out", ar: "نفذت الكمية" },
   "card.quickadd": { en: "Quick add", ar: "إضافة سريعة" },
+  "card.selectsize": { en: "Select a size", ar: "اختر مقاساً" },
   "pdp.color": { en: "Color", ar: "اللون" },
   "pdp.size": { en: "Size", ar: "المقاس" },
   "pdp.qty": { en: "Quantity", ar: "الكمية" },

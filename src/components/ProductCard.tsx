@@ -1,5 +1,4 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { formatPrice, sortSizes, type Item } from "@/lib/supabase";
@@ -16,7 +15,7 @@ export function ProductCard({ item }: { item: Item }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { addItem } = useCart();
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const imageUrl = getCardImageUrl(item);
   const swatches = sortCardColors(item);
@@ -43,15 +42,13 @@ export function ProductCard({ item }: { item: Item }) {
       onView: () => navigate({ to: "/cart" }),
       t,
     });
-    setPickerOpen(false);
+    setModalOpen(false);
   };
 
-  const handleCartClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleAddClick = () => {
     if (soldOut) return;
     if (sizes.length > 1) {
-      setPickerOpen((open) => !open);
+      setModalOpen(true);
       return;
     }
     addToCart(sizes[0] ?? null);
@@ -72,38 +69,6 @@ export function ProductCard({ item }: { item: Item }) {
             <div style={{ width: "100%", height: "100%", background: "#141414" }} />
           )}
           {soldOut && <div className="pc-soldout">{t("card.soldout")}</div>}
-          {sizes.length > 1 && (
-            <div
-              className={`pc-quickadd${pickerOpen ? " is-open" : ""}`}
-              onClick={(e) => e.preventDefault()}
-            >
-              <div className="flex flex-wrap justify-center gap-[10px]">
-                {sizes.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      addToCart(size);
-                    }}
-                    style={{
-                      background: "transparent",
-                      border: "1px solid #000",
-                      color: "#000",
-                      padding: "4px 8px",
-                      fontSize: 11,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         <div className="mt-3">
           <div style={{ fontSize: 13, color: "#fff", overflowWrap: "anywhere" }}>{item.name}</div>
@@ -146,26 +111,86 @@ export function ProductCard({ item }: { item: Item }) {
       </Link>
       <FavoriteButton itemId={item.id} itemName={item.name} className="pc-favorite" />
       {!soldOut && (
-        <button
-          type="button"
-          className="pc-cart"
-          onClick={handleCartClick}
-          aria-label={t("card.add")}
-          title={t("card.add")}
+        <button type="button" className="jb-btn mt-3" style={{ width: "100%" }} onClick={handleAddClick}>
+          {t("card.add")}
+        </button>
+      )}
+      {modalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setModalOpen(false)}
           style={{
-            display: "inline-flex",
+            position: "fixed",
+            inset: 0,
+            zIndex: 500,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 38,
-            height: 38,
-            border: "1px solid #262626",
-            background: "rgba(0,0,0,0.72)",
-            color: "#fff",
-            cursor: "pointer",
+            padding: 16,
           }}
         >
-          <ShoppingBag size={17} strokeWidth={1.8} aria-hidden="true" />
-        </button>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 360,
+              background: "#000",
+              border: "1px solid #fff",
+              padding: "32px 24px",
+              position: "relative",
+              color: "#fff",
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setModalOpen(false)}
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                background: "transparent",
+                border: "none",
+                color: "#fff",
+                fontSize: 20,
+                cursor: "pointer",
+                lineHeight: 1,
+                padding: 8,
+              }}
+            >
+              ×
+            </button>
+            <div style={{ fontSize: 13, color: "#fff" }}>{item.name}</div>
+            <div style={{ fontSize: 13, color: "#9a9a9a", marginTop: 2, marginBottom: 20 }}>
+              {formatPrice(item.price_egp)}
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                color: "#9a9a9a",
+                marginBottom: 12,
+              }}
+            >
+              {t("card.selectsize")}
+            </div>
+            <div className="flex flex-wrap gap-[10px]">
+              {sizes.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  className="jb-btn-ghost"
+                  onClick={() => addToCart(size)}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -256,12 +256,6 @@
   right: 10px;
   z-index: 5;
 }
-.pc-cart {
-  position: absolute;
-  top: 54px;
-  right: 10px;
-  z-index: 5;
-}
 .pc-img {
   width: 100%;
   height: 100%;
@@ -288,8 +282,7 @@
   width: 100%;
 }
 .pc:hover .pc-quickadd,
-.pc-img-wrap:hover .pc-quickadd,
-.pc-quickadd.is-open {
+.pc-img-wrap:hover .pc-quickadd {
   transform: translateY(0);
 }
 .pc-soldout {
