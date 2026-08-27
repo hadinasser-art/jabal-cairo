@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n";
+import { maintenanceDestination, MAINTENANCE_MODE } from "@/lib/maintenance";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Login — JABAL" }] }),
@@ -24,7 +25,7 @@ function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) setErr(error.message);
-    else navigate({ to: "/account" });
+    else navigate({ to: maintenanceDestination });
   };
 
   const google = async () => {
@@ -41,9 +42,11 @@ function LoginPage() {
   };
 
   return (
-    <Layout>
+    <Layout minimal={MAINTENANCE_MODE} showWhatsApp={!MAINTENANCE_MODE}>
       <div className="max-w-md mx-auto px-6 py-16">
-        <div className="jb-eyebrow">{t("account.eyebrow")}</div>
+        <div className="jb-eyebrow">
+          {MAINTENANCE_MODE ? t("maintenance.adminAccess") : t("account.eyebrow")}
+        </div>
         <h1
           style={{
             fontSize: "clamp(1.75rem, 4vw, 2.25rem)",
@@ -95,7 +98,7 @@ function LoginPage() {
           {t("auth.google")}
         </button>
         <div
-          className="mt-6 flex justify-between"
+          className={`mt-6 flex ${MAINTENANCE_MODE ? "justify-center" : "justify-between"}`}
           style={{
             fontSize: 12,
             letterSpacing: "0.15em",
@@ -106,9 +109,11 @@ function LoginPage() {
           <Link to="/forgot" className="hover:underline">
             {t("auth.forgot")}
           </Link>
-          <Link to="/register" search={{ google: undefined }} className="hover:underline">
-            {t("auth.register")}
-          </Link>
+          {!MAINTENANCE_MODE && (
+            <Link to="/register" search={{ google: undefined }} className="hover:underline">
+              {t("auth.register")}
+            </Link>
+          )}
         </div>
       </div>
     </Layout>

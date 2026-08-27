@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { supabase } from "@/lib/supabase";
 import { upsertProfile } from "@/lib/profile";
+import { maintenanceDestination, MAINTENANCE_MODE } from "@/lib/maintenance";
 
 export const Route = createFileRoute("/auth/callback")({
   component: CallbackPage,
@@ -28,7 +29,7 @@ function CallbackPage() {
           city: null,
           governorate: null,
         });
-        navigate({ to: "/account" });
+        navigate({ to: maintenanceDestination });
       } else {
         navigate({ to: "/login" });
       }
@@ -36,7 +37,7 @@ function CallbackPage() {
   }, [navigate]);
 
   return (
-    <Layout>
+    <Layout minimal={MAINTENANCE_MODE} showWhatsApp={!MAINTENANCE_MODE}>
       <div
         className="px-6 py-24 text-center"
         style={{

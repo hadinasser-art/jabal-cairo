@@ -5,6 +5,8 @@ import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { JABAL_LOGO_URL, JABAL_SUPPORT_EMAIL, JABAL_SUPPORT_PHONE } from "@/lib/supabase";
 import { OfferTopBar } from "@/components/OfferTopBar";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { BrandMark } from "@/components/BrandMark";
 import { useI18n, type Lang } from "@/lib/i18n";
 
 function whatsappHref(phone: string) {
@@ -32,7 +34,13 @@ function WhatsAppButton() {
         boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
       }}
     >
-      <img src="/whatsapp-icon.png" alt="WhatsApp" width={40} height={40} style={{ objectFit: "contain" }} />
+      <img
+        src="/whatsapp-icon.png"
+        alt="WhatsApp"
+        width={40}
+        height={40}
+        style={{ objectFit: "contain" }}
+      />
     </a>
   );
 }
@@ -40,15 +48,29 @@ function WhatsAppButton() {
 export function Layout({
   children,
   showWhatsApp = true,
+  minimal = false,
 }: {
   children: ReactNode;
   showWhatsApp?: boolean;
+  minimal?: boolean;
 }) {
   const { count } = useCart();
   const { user, isAdmin, signOut } = useAuth();
   const { lang, setLang, t } = useI18n();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+
+  if (minimal) {
+    return (
+      <div className="flex min-h-svh flex-col bg-black text-white">
+        <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 md:py-8">
+          <BrandMark />
+          <LanguageToggle />
+        </header>
+        <main className="flex-1">{children}</main>
+      </div>
+    );
+  }
 
   const handleLogout = async () => {
     await signOut();

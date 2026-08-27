@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Analytics } from "@vercel/analytics/react";
@@ -14,9 +15,11 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CartProvider } from "../lib/cart";
 import { I18nProvider } from "../lib/i18n";
-import { AuthProvider } from "../lib/auth";
+import { AuthProvider, useAuth } from "../lib/auth";
+import { isMaintenanceAuthPath, MAINTENANCE_MODE } from "../lib/maintenance";
 import { OfferPopup } from "../components/OfferPopup";
 import { MarketingConsentPrompt } from "../components/MarketingConsentPrompt";
+import { MaintenanceScreen } from "../components/MaintenanceScreen";
 import { Toaster } from "sonner";
 
 function NotFoundComponent() {
@@ -107,14 +110,37 @@ function RootComponent() {
       <I18nProvider>
         <AuthProvider>
           <CartProvider>
-            <Outlet />
-            <OfferPopup />
-            <MarketingConsentPrompt />
+            <SiteAccessGate />
             <Toaster position="top-right" theme="dark" />
             <Analytics />
           </CartProvider>
         </AuthProvider>
       </I18nProvider>
     </QueryClientProvider>
+  );
+}
+
+function SiteAccessGate() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const { isAdmin } = useAuth();
+
+  if (!MAINTENANCE_MODE || isAdmin) {
+    return <StorefrontContent />;
+  }
+
+  if (isMaintenanceAuthPath(pathname)) {
+    return <Outlet />;
+  }
+
+  return <MaintenanceScreen />;
+}
+
+function StorefrontContent() {
+  return (
+    <>
+      <Outlet />
+      <OfferPopup />
+      <MarketingConsentPrompt />
+    </>
   );
 }

@@ -22,6 +22,19 @@ const DICT: Dict = {
   "lang.ar": { en: "Arabic", ar: "العربية" },
   promo: { en: "Free shipping above EGP 2,000", ar: "شحن مجاني للطلبات فوق 2,000 جنيه" },
 
+  // maintenance
+  "maintenance.eyebrow": { en: "Site maintenance", ar: "صيانة الموقع" },
+  "maintenance.title": { en: "We’ll be back soon.", ar: "سنعود قريباً." },
+  "maintenance.body": {
+    en: "JABAL is currently under maintenance while we refine your experience.",
+    ar: "موقع JABAL تحت الصيانة حالياً بينما نعمل على تحسين تجربتكم.",
+  },
+  "maintenance.support": {
+    en: "Need assistance? Contact",
+    ar: "للمساعدة، تواصلوا معنا عبر",
+  },
+  "maintenance.adminAccess": { en: "Administrator access", ar: "دخول الإدارة" },
+
   // sections
   "men.eyebrow": { en: "Men", ar: "رجال" },
   "men.title": { en: "Men's everyday essentials", ar: "أساسيات الرجال اليومية" },

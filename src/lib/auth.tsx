@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
@@ -13,27 +13,22 @@ type AuthCtx = {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+type AdminStatus = {
+  userId: string;
+  isAdmin: boolean;
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
 
-  const refreshAdminStatus = useCallback(async (currentUserId: string | null) => {
-    if (!currentUserId) {
-      setIsAdmin(false);
-      setAdminLoading(false);
-      return false;
-    }
-
-    setAdminLoading(true);
-    const { data, error } = await supabase.rpc("is_admin");
-    const nextIsAdmin = !error && data === true;
-    setIsAdmin(nextIsAdmin);
-    setAdminLoading(false);
-    return nextIsAdmin;
-  }, []);
+  const currentUserId = user?.id ?? null;
+  const isAdmin = Boolean(
+    currentUserId && adminStatus?.userId === currentUserId && adminStatus.isAdmin,
+  );
+  const adminLoading = Boolean(currentUserId && adminStatus?.userId !== currentUserId);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -49,15 +44,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refreshAdminStatus(user?.id ?? null);
+    if (!currentUserId) {
+      setAdminStatus(null);
+      return;
+    }
+
+    let active = true;
+    const checkedUserId = currentUserId;
+
+    void supabase.rpc("is_admin").then(({ data, error }) => {
+      if (!active) return;
+      setAdminStatus({
+        userId: checkedUserId,
+        isAdmin: !error && data === true,
+      });
+    });
+
     // RPCs enforce admin access server-side. Rechecking on a timer or window focus
     // briefly replaced the admin UI with its loading screen and discarded local edits.
-  }, [user?.id, refreshAdminStatus]);
+    return () => {
+      active = false;
+    };
+  }, [currentUserId]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setIsAdmin(false);
-    setAdminLoading(false);
+    setAdminStatus(null);
   };
 
   return (

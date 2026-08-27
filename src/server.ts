@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { isMaintenanceStatusBypassPath, MAINTENANCE_MODE } from "./lib/maintenance";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -37,12 +38,37 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   });
 }
 
+function applyMaintenanceResponse(request: Request, response: Response) {
+  if (!MAINTENANCE_MODE || response.status >= 500) return response;
+  if (request.method !== "GET" && request.method !== "HEAD") return response;
+
+  const acceptsHtml = request.headers.get("accept")?.includes("text/html") ?? false;
+  const isDocument = request.headers.get("sec-fetch-dest") === "document";
+  if (!acceptsHtml && !isDocument) return response;
+
+  const pathname = new URL(request.url).pathname;
+  if (isMaintenanceStatusBypassPath(pathname)) return response;
+
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", "no-store, max-age=0");
+  headers.set("cdn-cache-control", "no-store");
+  headers.set("vercel-cdn-cache-control", "no-store");
+  headers.set("retry-after", "3600");
+
+  return new Response(request.method === "HEAD" ? null : response.body, {
+    status: 503,
+    statusText: "Service Unavailable",
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalizedResponse = await normalizeCatastrophicSsrResponse(response);
+      return applyMaintenanceResponse(request, normalizedResponse);
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {
