@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n";
-import { maintenanceDestination, MAINTENANCE_MODE } from "@/lib/maintenance";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({ meta: [{ title: "New password — JABAL" }] }),
@@ -24,11 +23,11 @@ function ResetPage() {
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (error) setErr(error.message);
-    else navigate({ to: maintenanceDestination });
+    else navigate({ to: "/account" });
   };
 
   return (
-    <Layout minimal={MAINTENANCE_MODE} showWhatsApp={!MAINTENANCE_MODE}>
+    <Layout>
       <div className="max-w-md mx-auto px-6 py-16">
         <div className="jb-eyebrow">{t("account.eyebrow")}</div>
         <h1

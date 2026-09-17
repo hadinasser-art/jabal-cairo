@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n";
-import { MAINTENANCE_MODE } from "@/lib/maintenance";
 
 export const Route = createFileRoute("/forgot")({
   head: () => ({ meta: [{ title: "Reset password — JABAL" }] }),
@@ -31,7 +30,7 @@ function ForgotPage() {
   };
 
   return (
-    <Layout minimal={MAINTENANCE_MODE} showWhatsApp={!MAINTENANCE_MODE}>
+    <Layout>
       <div className="max-w-md mx-auto px-6 py-16">
         <div className="jb-eyebrow">{t("account.eyebrow")}</div>
         <h1
