@@ -1,0 +1,3 @@
+[functions.telegram-order-alert]
+# The handler verifies a dedicated Vault-backed key through a service-only RPC.
+verify_jwt = false
